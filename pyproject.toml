@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
 authors = [
-    { name = "Sekha AI", email = "jeff@sekha.ai" },
+    { name = "Sekha AI", email = "jeff@sekha-ai.dev" },
 ]
 keywords = ["memory", "ai", "llm", "context", "sdk"]
 classifiers = [
@@ -51,10 +51,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://sekha.ai"
-Documentation = "https://docs.sekha.ai"
-Repository = "https://github.com/sekha-ai/python-sdk"
-Issues = "https://github.com/sekha-ai/python-sdk/issues"
+Homepage = "https://sakha-ai.dev/"
+Documentation = "https://docs.sekha-ai.dev"
+Repository = "https://github.com/sekha-ai/sekha-python-sdk"
+Issues = "https://github.com/sekha-ai/sekha-python-sdk/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["sekha"]
