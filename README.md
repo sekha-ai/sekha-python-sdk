@@ -1,3 +1,9 @@
+[![CI Status](https://github.com/sekha-ai/sekha-python-sdk/workflows/CI/badge.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions)
+[![codecov](https://codecov.io/gh/sekha-ai/sekha-python-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-python-sdk)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
+[![PyPI](https://img.shields.io/pypi/v/sekha-python-sdk.svg)](https://pypi.org/project/sekha-python-sdk/)
+
 # Sekha Python SDK
 
 Python client library for the Sekha AI Memory System.
