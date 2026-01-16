@@ -1,7 +1,7 @@
 # Production dependencies (should match pyproject.toml)
 httpx==0.28.1
 pydantic==2.9.2
-python-dotenv==1.0.0
+python-dotenv==1.2.1
 aiofiles==23.2.1
 backoff==2.2.1
 
@@ -11,4 +11,4 @@ pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 black==23.12.1
 isort==5.13.2
-mypy==1.11.2
+mypy==1.19.1
