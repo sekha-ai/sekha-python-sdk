@@ -5,17 +5,13 @@ from datetime import datetime
 from sekha.models import (
     MessageRole,
     ConversationStatus,
-    SummaryLevel,
     MessageDto,
-    NewConversation,
     ConversationResponse,
     QueryRequest,
     QueryResult,
-    QueryResponse,
     LabelSuggestion,
     PruningSuggestion,
     ImportanceScore,
-    SummaryResponse,
 )
 from pydantic import ValidationError
 

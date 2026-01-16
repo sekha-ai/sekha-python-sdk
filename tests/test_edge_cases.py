@@ -5,7 +5,7 @@ Covers missing coverage gaps
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 import httpx
 
@@ -17,11 +17,8 @@ from sekha import (
     MessageDto,
     MessageRole,
     SekhaAPIError,
-    SekhaAuthError,
     SekhaConnectionError,
     SekhaNotFoundError,
-    SekhaValidationError,
-    SekhaRateLimitError,
 )
 
 
@@ -267,7 +264,6 @@ class TestRateLimiterBackoffCoverage:
         backoff.attempt = 10
         
         # Should cap at max_delay
-        import asyncio
         start = asyncio.get_event_loop().time()
         # Note: We can't easily test the actual wait without async, but we can test the logic
         assert backoff.max_delay == 15.0

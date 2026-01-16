@@ -3,19 +3,14 @@ Tests for SekhaClient
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
 from sekha import (
     SekhaClient,
-    SekhaAPIError,
-    SekhaNotFoundError,
     NewConversation,
     MessageDto,
     ConversationResponse,
-    QueryRequest,
-    ConversationStatus,
     MessageRole,
     ClientConfig,
 )

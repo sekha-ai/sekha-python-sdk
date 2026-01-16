@@ -2,8 +2,6 @@
 
 import pytest
 import asyncio
-from datetime import datetime, timezone
-from unittest.mock import patch
 
 from sekha.utils import (
     RateLimiter,

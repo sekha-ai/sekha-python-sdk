@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from sekha import SekhaClient, ClientConfig, NewConversation, MessageDto, MessageRole
+from sekha import SekhaClient, ClientConfig
 
 @pytest.fixture
 def mock_client():

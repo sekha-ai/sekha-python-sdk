@@ -4,8 +4,7 @@ Tests all major API endpoints with realistic scenarios
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 import httpx
 
@@ -15,14 +14,11 @@ from sekha import (
     NewConversation,
     MessageDto,
     MessageRole,
-    ConversationStatus,
-    QueryRequest,
     SekhaAPIError,
     SekhaAuthError,
     SekhaConnectionError,
     SekhaNotFoundError,
     SekhaValidationError,
-    QueryResponse,
 )
 
 

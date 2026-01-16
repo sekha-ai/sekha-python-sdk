@@ -2,7 +2,7 @@
 Pydantic models for type-safe API interaction
 """
 
-from typing import List, Optional, Dict, Any, Literal, Union
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum

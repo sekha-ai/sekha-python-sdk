@@ -4,7 +4,7 @@ Main client for interacting with Sekha API
 
 import asyncio
 import httpx
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 import backoff
 
