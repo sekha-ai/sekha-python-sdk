@@ -2,7 +2,13 @@
 Sekha AI Memory System - Python SDK
 """
 
-from .client import SekhaClient, SyncSekhaClient, ClientConfig, MemoryController, MemoryConfig
+from .client import (
+    SekhaClient,
+    SyncSekhaClient,
+    ClientConfig,
+    MemoryController,
+    MemoryConfig,
+)
 from .models import *
 from .errors import *
 
@@ -15,7 +21,7 @@ __all__ = [
     "SyncSekhaClient",
     "ClientConfig",
     "MemoryController",  # Alias for SekhaClient
-    "MemoryConfig",      # Alias for ClientConfig
+    "MemoryConfig",  # Alias for ClientConfig
     # Models
     "MessageRole",
     "ConversationStatus",

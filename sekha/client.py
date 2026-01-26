@@ -12,6 +12,7 @@ from .models import *
 from .errors import *
 from .utils import RateLimiter, ExponentialBackoff, validate_api_key, validate_base_url
 
+
 @dataclass
 class ClientConfig:
     """Client configuration"""
@@ -28,10 +29,10 @@ class ClientConfig:
         """Validate configuration after initialization"""
         validate_api_key(self.api_key)
         validate_base_url(self.base_url)
-        
+
         if self.timeout <= 0:
             raise ValueError("timeout must be positive")
-            
+
         if self.max_retries < 0:
             raise ValueError("max_retries must be non-negative")
 
@@ -234,7 +235,7 @@ class SekhaClient:
 
     # ============== Smart Query ==============
 
-# Find smart_query method (around line 259-267)
+    # Find smart_query method (around line 259-267)
 
     async def smart_query(
         self,
@@ -479,6 +480,7 @@ class SekhaClient:
 
 
 # ============== Sync Wrapper ==============
+
 
 class SyncSekhaClient:
     """

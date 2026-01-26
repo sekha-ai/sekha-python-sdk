@@ -17,7 +17,7 @@ class TestSekhaAPIError:
         error = SekhaAPIError(
             message="Bad Request",
             status_code=400,
-            response='{"detail": "Invalid data"}'
+            response='{"detail": "Invalid data"}',
         )
         assert error.status_code == 400
         assert "400" in str(error)
