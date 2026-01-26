@@ -18,11 +18,8 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -33,7 +30,7 @@ dependencies = [
     "python-dotenv>=1.0.0,<2.0",
     "aiofiles>=23.0.0,<26.0",
     "backoff>=2.2.0,<3.0",
-    "typing-extensions>=4.0.0; python_version<'3.10'",
+    "typing-extensions>=4.0.0; python_version<'3.12'",
 ]
 
 [project.optional-dependencies]
@@ -52,7 +49,7 @@ docs = [
 
 [project.urls]
 Homepage = "https://sakha-ai.dev/"
-Documentation = "https://docs.sekha-ai.dev"
+Documentation = "https://docs.sekha.dev"
 Repository = "https://github.com/sekha-ai/sekha-python-sdk"
 Issues = "https://github.com/sekha-ai/sekha-python-sdk/issues"
 

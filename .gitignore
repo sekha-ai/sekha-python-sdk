@@ -32,6 +32,8 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+.ruff_cache/
+.venv/
 
 # IDE
 .vscode/
