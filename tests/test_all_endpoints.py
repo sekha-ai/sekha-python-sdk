@@ -1,9 +1,20 @@
-"""Comprehensive test suite for all 19 Sekha controller endpoints"""
+"""Comprehensive test suite for all 19 Sekha controller endpoints
+
+These are integration tests that require a running Sekha controller.
+Run with: SEKHA_INTEGRATION_TESTS=1 pytest tests/test_all_endpoints.py
+"""
 
 import pytest
 import uuid
+import os
 from sekha import SekhaClient
 from sekha.models import NewConversation, MessageDto, MessageRole
+
+# Skip all integration tests unless explicitly enabled
+pytestmark = pytest.mark.skipif(
+    not os.getenv("SEKHA_INTEGRATION_TESTS"),
+    reason="Integration tests require SEKHA_INTEGRATION_TESTS=1 and running controller"
+)
 
 
 @pytest.fixture
@@ -168,7 +179,6 @@ class TestHealthMetrics:
     @pytest.mark.asyncio
     async def test_health(self, client):
         """GET /health"""
-        # Health endpoint doesn't require auth typically
         import httpx
 
         async with httpx.AsyncClient() as http_client:
@@ -187,6 +197,8 @@ class TestHealthMetrics:
             response.raise_for_status()
 
 
+# This test doesn't need integration marker - it's a pure unit test
+@pytest.mark.unit
 class TestEndpointCoverage:
     """Validate all 19 endpoints are implemented"""
 
@@ -227,3 +239,7 @@ class TestEndpointCoverage:
         print(f"✓ All {len(client_methods)} client methods implemented")
         print("✓ Health and metrics endpoints available via direct HTTP")
         print("✓ Total coverage: 19 controller endpoints")
+
+
+# Override the module-level skip for the unit test
+TestEndpointCoverage.test_all_endpoints_mapped = pytest.mark.skipif(False, reason="")(TestEndpointCoverage.test_all_endpoints_mapped)
