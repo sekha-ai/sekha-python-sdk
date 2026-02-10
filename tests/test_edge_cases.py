@@ -4,12 +4,10 @@ Covers missing coverage gaps
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from datetime import datetime
 import httpx
 
 from sekha import (
     SekhaClient,
-    ClientConfig,
     NewConversation,
     MessageDto,
     MessageRole,
