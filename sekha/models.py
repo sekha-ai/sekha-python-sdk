@@ -4,6 +4,7 @@ Pydantic models for type-safe API interaction
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from dataclasses import dataclass
 from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 
@@ -27,6 +28,32 @@ class SummaryLevel(str, Enum):
     MONTHLY = "monthly"
 
 
+@dataclass
+class ClientConfig:
+    """Client configuration"""
+
+    api_key: str
+    base_url: str = "http://localhost:8080"
+    timeout: float = 30.0
+    max_retries: int = 3
+    rate_limit_requests: int = 1000  # per minute
+    rate_limit_window: float = 60.0
+    default_label: Optional[str] = None
+
+    def __post_init__(self):
+        """Validate configuration after initialization"""
+        from .utils import validate_api_key, validate_base_url
+
+        validate_api_key(self.api_key)
+        validate_base_url(self.base_url)
+
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+        if self.max_retries < 0:
+            raise ValueError("max_retries must be non-negative")
+
+
 class MessageDto(BaseModel):
     """Message data transfer object"""
 
@@ -41,8 +68,8 @@ class NewConversation(BaseModel):
     """Create a new conversation"""
 
     messages: List[MessageDto] = []
-    label: Optional[str] = None
-    folder: Optional[str] = None
+    label: str = Field(default="default")
+    folder: str = Field(default="default")
     metadata: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(use_enum_values=True)
@@ -54,7 +81,7 @@ class ConversationResponse(BaseModel):
     id: str
     label: str
     folder: str
-    status: ConversationStatus
+    status: str
     message_count: int
     created_at: datetime
 
@@ -62,10 +89,11 @@ class ConversationResponse(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    """Smart query request"""
+    """Query request matching controller DTOs"""
 
     query: str = Field(..., min_length=1)
     limit: Optional[int] = Field(default=10, ge=1, le=1000)
+    offset: Optional[int] = Field(default=0, ge=0)
     filters: Optional[Dict[str, Any]] = None
 
 
@@ -83,7 +111,7 @@ class QueryResult(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Smart query response"""
+    """Query response"""
 
     results: List[QueryResult]
     total: int
@@ -117,8 +145,8 @@ class HealthResponse(BaseModel):
     """Health check response"""
 
     status: str
-    timestamp: str
-    checks: Dict[str, Any]
+    version: str
+    uptime_seconds: int
 
 
 class ImportanceScore(BaseModel):
@@ -132,7 +160,7 @@ class ImportanceScore(BaseModel):
 class SummaryResponse(BaseModel):
     """Generated summary"""
 
+    conversation_id: str
+    level: str
     summary: str
-    level: SummaryLevel
-    model: str
-    tokens_used: int
+    generated_at: datetime
