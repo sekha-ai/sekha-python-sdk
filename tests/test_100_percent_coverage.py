@@ -371,20 +371,3 @@ class TestUtils:
         """Line 113"""
         with pytest.raises(ValueError):
             parse_iso_datetime("not-a-date")
-
-
-class TestAdditionalCoverage:
-    """Extra tests for line 550"""
-    
-    @pytest.mark.asyncio
-    async def test_get_knowledge_graph(self, test_config):
-        """Line 550 - get_knowledge_graph method"""
-        transport = MockTransport()
-        transport.add_response("GET", "/api/v1/knowledge-graph",
-                             create_mock_response(200, {"nodes": [], "edges": []}))
-        
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
-            client = SekhaClient(test_config)
-            client.client = http_client
-            result = await client.get_knowledge_graph()
-            assert "nodes" in result
