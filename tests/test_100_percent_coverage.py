@@ -1,4 +1,4 @@
-"""Tests specifically targeting 100% code coverage
+"\"\"Tests specifically targeting 100% code coverage
 
 Covers all remaining uncovered lines in sekha/client.py, sekha/models.py, and sekha/utils.py
 """
@@ -545,7 +545,7 @@ class TestUtilsEdgeCases:
     def test_validate_base_url_non_string(self):
         """Test validate_base_url with non-string (line 89)"""
         with pytest.raises(ValueError, match="must be a string"):
-        validate_base_url(12345)  # type: ignore
+            validate_base_url(12345)  # type: ignore
 
     def test_validate_base_url_no_scheme(self):
         """Test validate_base_url without scheme (line 105)"""
