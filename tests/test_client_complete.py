@@ -21,7 +21,6 @@ from sekha import (
     SekhaValidationError,
 )
 
-
 # ==================== Fixtures ====================
 
 

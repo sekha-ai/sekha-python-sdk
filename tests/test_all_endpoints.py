@@ -226,9 +226,7 @@ class TestEndpointCoverage:
         client = SekhaClient(config)
 
         for method in client_methods:
-            assert hasattr(
-                client, method
-            ), f"SekhaClient missing method: {method}"
+            assert hasattr(client, method), f"SekhaClient missing method: {method}"
             assert callable(
                 getattr(client, method)
             ), f"SekhaClient.{method} is not callable"
