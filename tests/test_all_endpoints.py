@@ -14,7 +14,6 @@ from sekha import SekhaClient
 from sekha.models import NewConversation, MessageDto, MessageRole
 from datetime import datetime
 
-
 # Check if we should use real integration or mocks
 USE_REAL_CONTROLLER = os.getenv("SEKHA_INTEGRATION_TESTS") == "1"
 
@@ -25,9 +24,12 @@ def client(test_config):
     if USE_REAL_CONTROLLER:
         # Use real controller from environment
         from sekha import ClientConfig
+
         config = ClientConfig(
             base_url=os.getenv("SEKHA_BASE_URL", "http://localhost:8080"),
-            api_key=os.getenv("SEKHA_API_KEY", "sk-sekha-test-token-123456789012345678901234567890"),
+            api_key=os.getenv(
+                "SEKHA_API_KEY", "sk-sekha-test-token-123456789012345678901234567890"
+            ),
         )
         return SekhaClient(config)
     else:
@@ -39,25 +41,27 @@ def _create_mock_client(test_config):
     """Create a mocked client for local testing"""
     client = SekhaClient(test_config)
     client.client = AsyncMock()
-    
+
     # Default mock response
     default_response = Mock()
     default_response.raise_for_status = Mock()
-    default_response.json = Mock(return_value={
-        "id": str(uuid.uuid4()),
-        "label": "test-label",
-        "folder": "test-folder",
-        "status": "active",
-        "message_count": 2,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    })
-    
+    default_response.json = Mock(
+        return_value={
+            "id": str(uuid.uuid4()),
+            "label": "test-label",
+            "folder": "test-folder",
+            "status": "active",
+            "message_count": 2,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+    )
+
     client.client.post = AsyncMock(return_value=default_response)
     client.client.get = AsyncMock(return_value=default_response)
     client.client.put = AsyncMock(return_value=default_response)
     client.client.delete = AsyncMock(return_value=default_response)
-    
+
     return client
 
 
@@ -93,16 +97,18 @@ class TestConversationEndpoints:
             # Mock the response
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "id": test_conversation_id,
-                "label": "test",
-                "folder": "/",
-                "status": "active",
-                "message_count": 0,
-                "created_at": datetime.now().isoformat(),
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "id": test_conversation_id,
+                    "label": "test",
+                    "folder": "/",
+                    "status": "active",
+                    "message_count": 0,
+                    "created_at": datetime.now().isoformat(),
+                }
+            )
             client.client.get = AsyncMock(return_value=mock_response)
-        
+
         try:
             response = await client.get_conversation(test_conversation_id)
             assert response.id == test_conversation_id
@@ -118,14 +124,16 @@ class TestConversationEndpoints:
         if not USE_REAL_CONTROLLER:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "results": [],
-                "total": 0,
-                "page": 1,
-                "page_size": 10,
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "results": [],
+                    "total": 0,
+                    "page": 1,
+                    "page_size": 10,
+                }
+            )
             client.client.get = AsyncMock(return_value=mock_response)
-        
+
         response = await client.list_conversations(page=1, page_size=10)
         assert hasattr(response, "results")
         assert hasattr(response, "total")
@@ -135,7 +143,7 @@ class TestConversationEndpoints:
         """PUT /api/v1/conversations/{id}/label"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         await client.update_label(
             test_conversation_id,
             new_label="updated-label",
@@ -148,7 +156,7 @@ class TestConversationEndpoints:
         """PUT /api/v1/conversations/{id}/folder"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         await client.update_folder(test_conversation_id, new_folder="new-folder")
         assert client.client.put.called
 
@@ -157,7 +165,7 @@ class TestConversationEndpoints:
         """PUT /api/v1/conversations/{id}/pin"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         await client.pin_conversation(test_conversation_id)
         assert client.client.put.called
 
@@ -166,7 +174,7 @@ class TestConversationEndpoints:
         """PUT /api/v1/conversations/{id}/archive"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         await client.archive_conversation(test_conversation_id)
         assert client.client.put.called
 
@@ -175,7 +183,7 @@ class TestConversationEndpoints:
         """DELETE /api/v1/conversations/{id}"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         await client.delete_conversation(test_conversation_id)
         assert client.client.delete.called
 
@@ -187,7 +195,7 @@ class TestConversationEndpoints:
             mock_response.raise_for_status = Mock()
             mock_response.json = Mock(return_value={"count": 5})
             client.client.get = AsyncMock(return_value=mock_response)
-        
+
         count = await client.count_conversations()
         assert isinstance(count, int)
         assert count >= 0
@@ -202,14 +210,16 @@ class TestSearchQueryEndpoints:
         if not USE_REAL_CONTROLLER:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "results": [],
-                "total": 0,
-                "page": 1,
-                "page_size": 10,
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "results": [],
+                    "total": 0,
+                    "page": 1,
+                    "page_size": 10,
+                }
+            )
             client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.query(
             query="test search",
             limit=10,
@@ -224,12 +234,14 @@ class TestSearchQueryEndpoints:
         if not USE_REAL_CONTROLLER:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "results": [],
-                "total": 0,
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "results": [],
+                    "total": 0,
+                }
+            )
             client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.full_text_search(
             query="test",
             limit=10,
@@ -244,7 +256,7 @@ class TestSearchQueryEndpoints:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
             client.client.post = AsyncMock(return_value=mock_response)
-        
+
         await client.rebuild_embeddings()
         if not USE_REAL_CONTROLLER:
             assert client.client.post.called
@@ -261,7 +273,7 @@ class TestMemoryOrchestrationEndpoints:
             mock_response.raise_for_status = Mock()
             mock_response.json = Mock(return_value=[])
             client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.assemble_context(
             query="test query",
             preferred_labels=["important"],
@@ -275,15 +287,17 @@ class TestMemoryOrchestrationEndpoints:
         """POST /api/v1/summarize"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={
-            "summary": "Test summary",
-            "level": "daily",
-        })
+        mock_response.json = Mock(
+            return_value={
+                "summary": "Test summary",
+                "level": "daily",
+            }
+        )
         client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.summarize(
             conversation_id=test_conversation_id,
             level="daily",
@@ -297,12 +311,14 @@ class TestMemoryOrchestrationEndpoints:
         if not USE_REAL_CONTROLLER:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "suggestions": [],
-                "total": 0,
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "suggestions": [],
+                    "total": 0,
+                }
+            )
             client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.prune_dry_run(threshold_days=90)
         assert "suggestions" in response
         assert "total" in response
@@ -312,11 +328,11 @@ class TestMemoryOrchestrationEndpoints:
         """POST /api/v1/prune/execute"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Don't delete real conversations")
-        
+
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         client.client.post = AsyncMock(return_value=mock_response)
-        
+
         conversation_ids = [str(uuid.uuid4())]
         await client.prune_execute(conversation_ids)
         assert client.client.post.called
@@ -326,15 +342,17 @@ class TestMemoryOrchestrationEndpoints:
         """POST /api/v1/labels/suggest"""
         if USE_REAL_CONTROLLER:
             pytest.skip("Requires existing conversation in real controller")
-        
+
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={
-            "conversation_id": test_conversation_id,
-            "suggestions": [],
-        })
+        mock_response.json = Mock(
+            return_value={
+                "conversation_id": test_conversation_id,
+                "suggestions": [],
+            }
+        )
         client.client.post = AsyncMock(return_value=mock_response)
-        
+
         response = await client.suggest_labels(test_conversation_id)
         assert "conversation_id" in response
         assert "suggestions" in response
@@ -351,7 +369,7 @@ class TestHealthMetrics:
             mock_response.raise_for_status = Mock()
             mock_response.json = Mock(return_value={"status": "healthy"})
             client.client.get = AsyncMock(return_value=mock_response)
-        
+
         # Use the client's httpx client directly
         response = await client.client.get(f"{client.config.base_url}/health")
         response.raise_for_status()
@@ -365,7 +383,7 @@ class TestHealthMetrics:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
             client.client.get = AsyncMock(return_value=mock_response)
-        
+
         response = await client.client.get(f"{client.config.base_url}/metrics")
         response.raise_for_status()
         if not USE_REAL_CONTROLLER:

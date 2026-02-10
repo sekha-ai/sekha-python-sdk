@@ -214,7 +214,7 @@ class TestRateLimiterBackoffCoverage:
         # Should still work
         await client.rate_limiter.acquire()
         await client.rate_limiter.acquire()
-        
+
         await client.close()
 
     def test_validate_base_url_edge_cases(self):
