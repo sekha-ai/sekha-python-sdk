@@ -396,7 +396,7 @@ class TestAssembleContextDefaults:
 
 
 class TestSummarizeWithKwargs:
-    """Test summarize with kwargs (lines 400-418)"""
+    """Test summarize with kwargs (lines 387-388, 417-418)"""
 
     @pytest.mark.asyncio
     async def test_generate_summary_passes_kwargs(self, test_config):
@@ -417,7 +417,7 @@ class TestSummarizeWithKwargs:
 
 
 class TestAutoLabelNoMatch:
-    """Test auto_label when no suggestion meets threshold (lines 462-463, 471-481)"""
+    """Test auto_label when no suggestion meets threshold (lines 443-444, 462-463, 480-481)"""
 
     @pytest.mark.asyncio
     async def test_auto_label_returns_none(self, test_config):
@@ -481,13 +481,12 @@ class TestSyncWrapper:
     def test_sync_client_in_async_context(self, test_config):
         """Test SyncSekhaClient raises error in async context"""
         from sekha.client import SyncSekhaClient
-        import asyncio
 
         sync_client = SyncSekhaClient(test_config)
 
-        # Mock get_running_loop to simulate async context
-        with patch("asyncio.get_running_loop") as mock_loop:
-            mock_loop.return_value = Mock()
+        # Patch get_running_loop in the sekha.client module where it's used
+        with patch("sekha.client.asyncio.get_running_loop") as mock_loop:
+            mock_loop.return_value = Mock(spec=['is_running'])
 
             with pytest.raises(
                 RuntimeError, match="SyncSekhaClient cannot be used within an async context"
