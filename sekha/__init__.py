@@ -9,8 +9,31 @@ from .client import (
     MemoryController,
     MemoryConfig,
 )
-from .models import *
-from .errors import *
+from .models import (
+    MessageRole,
+    ConversationStatus,
+    SummaryLevel,
+    MessageDto,
+    NewConversation,
+    ConversationResponse,
+    QueryRequest,
+    QueryResult,
+    QueryResponse,
+    LabelSuggestion,
+    PruningSuggestion,
+    HealthResponse,
+    ImportanceScore,
+    SummaryResponse,
+)
+from .errors import (
+    SekhaError,
+    SekhaAPIError,
+    SekhaNotFoundError,
+    SekhaAuthError,
+    SekhaConnectionError,
+    SekhaValidationError,
+    SekhaRateLimitError,
+)
 
 __version__ = "0.5.0"
 __author__ = "Sekha AI <team@sekha.ai>"

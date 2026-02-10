@@ -3,7 +3,6 @@
 import asyncio
 import httpx
 from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
 import backoff
 
 # Explicit imports instead of wildcard
@@ -21,9 +20,8 @@ from .models import (
     NewConversation,
     QueryRequest,
     QueryResponse,
-    MessageDto,
 )
-from .utils import RateLimiter, validate_api_key, validate_base_url
+from .utils import RateLimiter, validate_api_key
 
 
 class SekhaClient:
@@ -263,9 +261,7 @@ class SekhaClient:
             if e.response.status_code == 404:
                 raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
             raise SekhaAPIError(
-                "Failed to archive conversation",
-                e.response.status_code,
-                e.response.text,
+                "Failed to archive conversation", e.response.status_code, e.response.text
             )
 
     async def delete_conversation(self, conversation_id: str) -> None:
@@ -358,7 +354,9 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Query failed: {e}")
 
-    async def full_text_search(self, query: str, limit: int = 10) -> Dict[str, Any]:
+    async def full_text_search(
+        self, query: str, limit: int = 10
+    ) -> Dict[str, Any]:
         """Full-text search using SQLite FTS5"""
         await self.rate_limiter.acquire()
 
@@ -440,7 +438,9 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Failed to generate summary: {e}")
 
-    async def prune_dry_run(self, threshold_days: int = 90) -> Dict[str, Any]:
+    async def prune_dry_run(
+        self, threshold_days: int = 90
+    ) -> Dict[str, Any]:
         """Get pruning suggestions without executing"""
         await self.rate_limiter.acquire()
 
@@ -509,7 +509,7 @@ class SyncSekhaClient:
     def _get_or_create_loop(self) -> asyncio.AbstractEventLoop:
         """Get existing event loop or create new one"""
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # We're already in an async context, can't use asyncio.run
             raise RuntimeError(
                 "SyncSekhaClient cannot be used within an async context. "
