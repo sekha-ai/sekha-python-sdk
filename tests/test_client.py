@@ -1,6 +1,4 @@
-"""
-Tests for SekhaClient
-"""
+"""Tests for SekhaClient"""
 
 import pytest
 from unittest.mock import Mock, AsyncMock
@@ -12,17 +10,13 @@ from sekha import (
     MessageDto,
     ConversationResponse,
     MessageRole,
-    ClientConfig,
 )
 
 
 @pytest.fixture
-def mock_client():
-    """Create a client with mocked httpx - synchronous fixture"""
-    config = ClientConfig(
-        api_key="sk-sekha-test-key-for-testing-only-12345678901234567890"
-    )
-    client = SekhaClient(config)
+def mock_client(test_config):
+    """Create a client with mocked httpx"""
+    client = SekhaClient(test_config)
 
     # Create a mock that tracks calls but allows method assignment
     mock_httpx_client = AsyncMock()
@@ -50,7 +44,7 @@ def mock_client():
     # Replace the actual client with mock
     client.client = mock_httpx_client
 
-    return client  # Return the client directly, not a generator
+    return client
 
 
 @pytest.mark.asyncio
@@ -71,8 +65,8 @@ async def test_create_conversation(mock_client):
 
 @pytest.mark.asyncio
 async def test_smart_query(mock_client):
-    """Test smart query"""
-    # Mock the response
+    """Test smart query (alias for query)"""
+    # Mock the response with proper QueryResponse structure
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
     mock_response.json = Mock(
@@ -107,45 +101,40 @@ async def test_smart_query(mock_client):
 @pytest.mark.asyncio
 async def test_pin_conversation(mock_client):
     """Test pinning a conversation"""
-    # Setup mock for put
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
 
-    # Override the put method for this test
     mock_client.client.put = AsyncMock(return_value=mock_response)
 
-    # Test pin
-    await mock_client.pin("test-conv-123")
+    # Use the correct method name
+    await mock_client.pin_conversation("test-conv-123")
 
     # Verify the call
     assert mock_client.client.put.called
     call_args = mock_client.client.put.call_args
-    assert "/conversations/test-conv-123/status" in call_args[0][0]
-    assert call_args[1]["json"]["status"] == "pinned"
+    assert "/conversations/test-conv-123/pin" in call_args[0][0]
 
 
 @pytest.mark.asyncio
 async def test_archive_conversation(mock_client):
     """Test archiving a conversation"""
-    # Setup mock for put
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
 
     mock_client.client.put = AsyncMock(return_value=mock_response)
 
-    # Test archive
-    await mock_client.archive("test-conv-123")
+    # Use the correct method name
+    await mock_client.archive_conversation("test-conv-123")
 
     # Verify the call
     assert mock_client.client.put.called
     call_args = mock_client.client.put.call_args
-    assert call_args[1]["json"]["status"] == "archived"
+    assert "/conversations/test-conv-123/archive" in call_args[0][0]
 
 
 @pytest.mark.asyncio
 async def test_export_conversations(mock_client):
     """Test export functionality"""
-    # Setup mock for get
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
     mock_response.json = Mock(
@@ -171,7 +160,6 @@ async def test_export_conversations(mock_client):
 @pytest.mark.asyncio
 async def test_export_conversations_json(mock_client):
     """Test export as JSON"""
-    # Setup mock for get
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
     mock_response.json = Mock(

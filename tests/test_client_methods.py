@@ -2,13 +2,12 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from sekha import SekhaClient, ClientConfig
+from sekha import SekhaClient, QueryResponse
 
 
 @pytest.fixture
-def mock_client():
-    config = ClientConfig(api_key="sk-sekha-test-12345678901234567890123456789012")
-    client = SekhaClient(config)
+def mock_client(test_config):
+    client = SekhaClient(test_config)
 
     # Mock the httpx client
     mock_httpx = AsyncMock()
@@ -29,26 +28,16 @@ def mock_client():
     mock_httpx.get = AsyncMock(return_value=default_response)
     mock_httpx.delete = AsyncMock(return_value=default_response)
     mock_httpx.post = AsyncMock(return_value=default_response)
+    mock_httpx.put = AsyncMock(return_value=default_response)
 
     client.client = mock_httpx
     return client
 
 
-# At the top level, add:
-@pytest.fixture
-def config():
-    """Test configuration"""
-    return ClientConfig(
-        base_url="http://localhost:8080",
-        api_key="sk-sekha-test-12345678901234567890123456789012",
-        default_label="Test",
-    )
-
-
 @pytest.mark.asyncio
-async def test_async_context_manager_cleanup(config):
+async def test_async_context_manager_cleanup(test_config):
     """Test proper resource cleanup in async context manager"""
-    client = SekhaClient(config)
+    client = SekhaClient(test_config)
     async with client:
         assert client.client is not None
 
@@ -68,8 +57,33 @@ async def test_get_conversation(mock_client):
 
 @pytest.mark.asyncio
 async def test_list_conversations(mock_client):
+    # Fix: Return proper QueryResponse structure
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json = Mock(
+        return_value={
+            "results": [
+                {
+                    "conversation_id": "conv-123",
+                    "message_id": "msg-1",
+                    "score": 1.0,
+                    "content": "test",
+                    "metadata": {},
+                    "label": "Test",
+                    "folder": "/",
+                    "timestamp": "2025-12-30T10:00:00Z",
+                }
+            ],
+            "total": 1,
+            "page": 1,
+            "page_size": 10,
+        }
+    )
+    mock_client.client.get = AsyncMock(return_value=mock_response)
+
     result = await mock_client.list_conversations(label="Work", page=1, page_size=10)
-    assert isinstance(result, list)
+    assert isinstance(result, QueryResponse)
+    assert result.total == 1
     assert mock_client.client.get.called
 
 
@@ -93,8 +107,8 @@ async def test_score_message_importance(mock_client):
     mock_client.client.post = AsyncMock(return_value=mock_response)
 
     result = await mock_client.score_message_importance("msg-456")
-    assert result.score == 8.5
-    assert result.model == "gpt-4"
+    assert result["score"] == 8.5
+    assert result["model"] == "gpt-4"
 
 
 @pytest.mark.asyncio
@@ -104,16 +118,14 @@ async def test_generate_summary(mock_client):
     mock_response.json = Mock(
         return_value={
             "summary": "Conversation summary",
-            "tokens_used": 150,  # Changed from token_count
-            "level": "daily",  # Must be enum value
-            "model": "gpt-4",  # Required field
+            "level": "daily",
         }
     )
     mock_client.client.post = AsyncMock(return_value=mock_response)
 
     result = await mock_client.generate_summary("conv-123")
-    assert result.summary == "Conversation summary"
-    assert result.tokens_used == 150
+    assert result["summary"] == "Conversation summary"
+    assert result["level"] == "daily"
 
 
 @pytest.mark.asyncio
@@ -121,21 +133,26 @@ async def test_suggest_labels(mock_client):
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
     mock_response.json = Mock(
-        return_value=[
-            {
-                "label": "Project:AI",
-                "confidence": 0.92,
-                "is_existing": True,
-                "reason": "Matches context",
-            }
-        ]
+        return_value={
+            "conversation_id": "conv-123",
+            "suggestions": [
+                {
+                    "label": "Project:AI",
+                    "confidence": 0.92,
+                    "is_existing": True,
+                    "reason": "Matches context",
+                    "folder": "/work",
+                }
+            ],
+        }
     )
     mock_client.client.post = AsyncMock(return_value=mock_response)
 
     result = await mock_client.suggest_labels("conv-123")
-    assert len(result) == 1
-    assert result[0].label == "Project:AI"
-    assert result[0].confidence > 0.9
+    suggestions = result["suggestions"]
+    assert len(suggestions) == 1
+    assert suggestions[0]["label"] == "Project:AI"
+    assert suggestions[0]["confidence"] > 0.9
 
 
 @pytest.mark.asyncio
@@ -144,14 +161,18 @@ async def test_auto_label_threshold_not_met(mock_client):
     mock_response = Mock()
     mock_response.raise_for_status = Mock()
     mock_response.json = Mock(
-        return_value=[
-            {
-                "label": "Uncertain",
-                "confidence": 0.5,
-                "is_existing": False,
-                "reason": "Uncertain",
-            }
-        ]
+        return_value={
+            "conversation_id": "conv-123",
+            "suggestions": [
+                {
+                    "label": "Uncertain",
+                    "confidence": 0.5,
+                    "is_existing": False,
+                    "reason": "Uncertain",
+                    "folder": "/",
+                }
+            ],
+        }
     )
     mock_client.client.post = AsyncMock(return_value=mock_response)
     mock_client.client.put = AsyncMock(return_value=Mock())
@@ -163,20 +184,28 @@ async def test_auto_label_threshold_not_met(mock_client):
 @pytest.mark.asyncio
 async def test_auto_label_threshold_met(mock_client):
     # Setup: high confidence suggestion
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json = Mock(
-        return_value=[
-            {
-                "label": "High Confidence",
-                "confidence": 0.95,
-                "is_existing": True,
-                "reason": "Clear match",
-            }
-        ]
+    suggest_response = Mock()
+    suggest_response.raise_for_status = Mock()
+    suggest_response.json = Mock(
+        return_value={
+            "conversation_id": "conv-123",
+            "suggestions": [
+                {
+                    "label": "High Confidence",
+                    "confidence": 0.95,
+                    "is_existing": True,
+                    "reason": "Clear match",
+                    "folder": "/work",
+                }
+            ],
+        }
     )
-    mock_client.client.post = AsyncMock(return_value=mock_response)
-    mock_client.client.put = AsyncMock(return_value=Mock())
+
+    update_response = Mock()
+    update_response.raise_for_status = Mock()
+
+    mock_client.client.post = AsyncMock(return_value=suggest_response)
+    mock_client.client.put = AsyncMock(return_value=update_response)
 
     result = await mock_client.auto_label("conv-123", threshold=0.8)
     assert result == "High Confidence"
@@ -201,14 +230,16 @@ async def test_get_mcp_tools(mock_client):
 # ============== SyncSekhaClient Tests ==============
 
 
-def test_sync_client_wrapper(config):
+def test_sync_client_wrapper(test_config):
     """Test SyncSekhaClient wraps async methods"""
     from sekha.client import SyncSekhaClient
 
-    sync_client = SyncSekhaClient(config)
+    sync_client = SyncSekhaClient(test_config)
 
-    # Test that it has async method names
-    assert hasattr(sync_client, "create_conversation")
-    assert hasattr(sync_client, "smart_query")
+    # Test that methods are callable
+    assert callable(getattr(sync_client, "create_conversation", None))
+    assert callable(getattr(sync_client, "smart_query", None))
 
-    sync_client._async_client.close()  # Cleanup
+    # Cleanup
+    if sync_client._loop and not sync_client._loop.is_closed():
+        sync_client._loop.close()
