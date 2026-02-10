@@ -80,7 +80,7 @@ def mock_client():
                     label = "Test"
             else:
                 label = "Test"
-        except:
+        except Exception:
             label = "Test"
 
         return {
