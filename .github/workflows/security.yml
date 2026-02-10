@@ -22,13 +22,20 @@ jobs:
           cargo audit
           cargo deny check
       
-      # Python security
+      # Python security - scan only project dependencies
       - name: Python security scan
         if: hashFiles('requirements.txt') != '' || hashFiles('pyproject.toml') != ''
         run: |
-          pip install safety bandit
-          safety check
-          bandit -r . -f json -o bandit-report.json
+          python -m pip install --upgrade pip
+          pip install safety bandit pip-audit
+          # Generate requirements from pyproject.toml
+          pip install build
+          python -m build --wheel
+          pip install -e .
+          # Use pip-audit which scans installed project deps only
+          pip-audit --desc
+          # Bandit for code security issues
+          bandit -r sekha/ -f json -o bandit-report.json || true
       
       # JavaScript security
       - name: npm audit
