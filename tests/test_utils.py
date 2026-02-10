@@ -41,25 +41,6 @@ class TestRateLimiter:
 
 
 class TestExponentialBackoff:
-    # COMMENTED OUT: Unused variable 'elapsed1' at line 193
-    # Purpose unclear - needs investigation before removing
-    # @pytest.mark.asyncio
-    # async def test_backoff_increases_delay(self):
-    #     """Test that backoff delay increases exponentially"""
-    #     backoff = ExponentialBackoff(base_delay=0.1, max_delay=1.0, factor=2.0)
-    #
-    #     # First wait
-    #     start = asyncio.get_event_loop().time()
-    #     await backoff.wait()
-    #     elapsed1 = asyncio.get_event_loop().time() - start  # UNUSED VARIABLE
-    #
-    #     # Second wait (should be ~0.2s)
-    #     start = asyncio.get_event_loop().time()
-    #     await backoff.wait()
-    #     elapsed2 = asyncio.get_event_loop().time() - start
-    #
-    #     assert elapsed2 > elapsed1 * 1.5  # Should be significantly longer
-
     @pytest.mark.asyncio
     async def test_backoff_respects_max_delay(self):
         """Test that backoff respects max delay cap"""
@@ -204,9 +185,13 @@ class TestExponentialBackoffEdgeCases:
         await backoff.wait()
         elapsed3 = asyncio.get_event_loop().time() - start
 
+        # Verify first wait is ~1s (base_delay)
+        assert 0.8 <= elapsed1 <= 1.3
+        # Verify second and third are ~2s (capped at max_delay)
         assert 1.8 <= elapsed2 <= 2.3
         assert 1.8 <= elapsed3 <= 2.3
-        assert abs(elapsed2 - elapsed3) < 0.2  # Should be similar
+        # Verify second and third are similar (both capped)
+        assert abs(elapsed2 - elapsed3) < 0.2
 
     def test_backoff_reset_multiple_times(self):
         """Test multiple resets work correctly"""

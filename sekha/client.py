@@ -3,7 +3,6 @@
 import asyncio
 import httpx
 from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
 import backoff
 
 # Explicit imports instead of wildcard
@@ -21,7 +20,6 @@ from .models import (
     NewConversation,
     QueryRequest,
     QueryResponse,
-    MessageDto,
 )
 from .utils import RateLimiter, validate_api_key, validate_base_url
 
@@ -42,6 +40,7 @@ class SekhaClient:
             config: ClientConfiguration object
         """
         validate_api_key(config.api_key)
+        validate_base_url(config.base_url)
 
         self.config = config
         self.rate_limiter = RateLimiter(
