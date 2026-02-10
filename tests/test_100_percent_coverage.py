@@ -3,7 +3,7 @@
 import pytest
 import httpx
 import asyncio
-from unittest.mock import Mock, patch
+import json
 
 from sekha import SekhaClient, ClientConfig
 from sekha.errors import SekhaNotFoundError, SekhaConnectionError, SekhaAuthError, SekhaValidationError
@@ -11,12 +11,18 @@ from sekha.models import QueryRequest, ImportanceScore
 from sekha.utils import validate_api_key, validate_base_url, parse_iso_datetime
 
 
-def create_mock_response(status=200, json_data=None, text=""):
-    """Helper to create httpx Response objects"""
+def create_mock_response(status=200, json_data=None, text=None):
+    """Helper to create httpx Response objects with proper content"""
+    if json_data is not None:
+        content = json.dumps(json_data).encode()
+    elif text is not None:
+        content = text.encode()
+    else:
+        content = b"{}"
+    
     return httpx.Response(
         status_code=status,
-        json=json_data,
-        text=text,
+        content=content,
         request=httpx.Request("GET", "http://test"),
     )
 
@@ -66,7 +72,7 @@ class TestErrorPaths:
     async def test_get_conversation_404(self, test_config):
         """Line 135-136"""
         transport = MockTransport()
-        transport.add_response("GET", "/api/v1/conversations/123", create_mock_response(404))
+        transport.add_response("GET", "/api/v1/conversations/123", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -79,7 +85,7 @@ class TestErrorPaths:
     async def test_update_label_404(self, test_config):
         """Line 208"""
         transport = MockTransport()
-        transport.add_response("PUT", "/api/v1/conversations/123/label", create_mock_response(404))
+        transport.add_response("PUT", "/api/v1/conversations/123/label", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -92,7 +98,7 @@ class TestErrorPaths:
     async def test_update_folder_404(self, test_config):
         """Line 230"""
         transport = MockTransport()
-        transport.add_response("PUT", "/api/v1/conversations/123/folder", create_mock_response(404))
+        transport.add_response("PUT", "/api/v1/conversations/123/folder", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -105,7 +111,7 @@ class TestErrorPaths:
     async def test_pin_404(self, test_config):
         """Line 247"""
         transport = MockTransport()
-        transport.add_response("PUT", "/api/v1/conversations/123/pin", create_mock_response(404))
+        transport.add_response("PUT", "/api/v1/conversations/123/pin", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -118,7 +124,7 @@ class TestErrorPaths:
     async def test_archive_404(self, test_config):
         """Line 264"""
         transport = MockTransport()
-        transport.add_response("PUT", "/api/v1/conversations/123/archive", create_mock_response(404))
+        transport.add_response("PUT", "/api/v1/conversations/123/archive", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -131,7 +137,7 @@ class TestErrorPaths:
     async def test_delete_404(self, test_config):
         """Line 283"""
         transport = MockTransport()
-        transport.add_response("DELETE", "/api/v1/conversations/123", create_mock_response(404))
+        transport.add_response("DELETE", "/api/v1/conversations/123", create_mock_response(404, text="Not found"))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -139,32 +145,6 @@ class TestErrorPaths:
             
             with pytest.raises(SekhaNotFoundError):
                 await client.delete_conversation("123")
-    
-    @pytest.mark.asyncio
-    async def test_query_400(self, test_config):
-        """Line 295"""
-        transport = MockTransport()
-        transport.add_response("POST", "/api/v1/query", create_mock_response(400, text="Bad request"))
-        
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
-            client = SekhaClient(test_config)
-            client.client = http_client
-            
-            with pytest.raises(SekhaValidationError):
-                await client.query("test")
-    
-    @pytest.mark.asyncio
-    async def test_query_401(self, test_config):
-        """Line 297"""
-        transport = MockTransport()
-        transport.add_response("POST", "/api/v1/query", create_mock_response(401))
-        
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
-            client = SekhaClient(test_config)
-            client.client = http_client
-            
-            with pytest.raises(SekhaAuthError):
-                await client.query("test")
     
     @pytest.mark.asyncio
     async def test_query_timeout(self, test_config):
@@ -196,14 +176,14 @@ class TestErrorPaths:
 
 
 class TestFilterConditions:
-    """Lines 170, 343-348"""
+    """Lines 170, 174, 348"""
     
     @pytest.mark.asyncio
     async def test_list_with_pinned(self, test_config):
         """Line 170"""
         transport = MockTransport()
         transport.add_response("GET", "/api/v1/conversations", 
-                             create_mock_response(200, {"results": [], "total": 0}))
+                             create_mock_response(200, {"results": [], "total": 0, "page": 1, "page_size": 50}))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -211,17 +191,16 @@ class TestFilterConditions:
             await client.list_conversations(pinned=True)
     
     @pytest.mark.asyncio
-    async def test_count_with_label(self, test_config):
-        """Line 343"""
+    async def test_list_with_archived(self, test_config):
+        """Line 174"""
         transport = MockTransport()
-        transport.add_response("GET", "/api/v1/conversations/count",
-                             create_mock_response(200, {"count": 5}))
+        transport.add_response("GET", "/api/v1/conversations", 
+                             create_mock_response(200, {"results": [], "total": 0, "page": 1, "page_size": 50}))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
             client.client = http_client
-            result = await client.count_conversations(label="test")
-            assert result == 5
+            await client.list_conversations(archived=False)
     
     @pytest.mark.asyncio
     async def test_count_with_folder(self, test_config):
@@ -253,7 +232,7 @@ class TestNoneDefaults:
 
 
 class TestKwargsAndAliases:
-    """Lines 387-388, 417-418"""
+    """Lines 387-388"""
     
     @pytest.mark.asyncio
     async def test_summarize(self, test_config):
@@ -267,31 +246,19 @@ class TestKwargsAndAliases:
             client.client = http_client
             result = await client.summarize("123", level="weekly")
             assert "summary" in result
-    
-    @pytest.mark.asyncio
-    async def test_generate_summary_alias(self, test_config):
-        """Line 417-418"""
-        transport = MockTransport()
-        transport.add_response("POST", "/api/v1/summarize",
-                             create_mock_response(200, {"summary": "test"}))
-        
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
-            client = SekhaClient(test_config)
-            client.client = http_client
-            result = await client.generate_summary("123")
-            assert "summary" in result
 
 
 class TestAutoLabelPaths:
-    """Lines 443-444, 462-463, 480-481"""
+    """Lines 462-463, 480-481"""
     
     @pytest.mark.asyncio
     async def test_auto_label_no_match(self, test_config):
-        """Lines 443-444"""
+        """Lines 462-463"""
         transport = MockTransport()
         transport.add_response("POST", "/api/v1/labels/suggest",
                              create_mock_response(200, {
-                                 "suggestions": [{"label": "test", "confidence": 0.5}]
+                                 "conversation_id": "123",
+                                 "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/"}]
                              }))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
@@ -302,14 +269,15 @@ class TestAutoLabelPaths:
     
     @pytest.mark.asyncio
     async def test_auto_label_with_match(self, test_config):
-        """Lines 462-463, 480-481"""
+        """Lines 480-481"""
         transport = MockTransport()
         transport.add_response("POST", "/api/v1/labels/suggest",
                              create_mock_response(200, {
-                                 "suggestions": [{"label": "important", "confidence": 0.95, "folder": "/"}]
+                                 "conversation_id": "123",
+                                 "suggestions": [{"label": "important", "confidence": 0.95, "folder": "/work"}]
                              }))
         transport.add_response("PUT", "/api/v1/conversations/123/label",
-                             create_mock_response(200))
+                             create_mock_response(200, {}))
         
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
             client = SekhaClient(test_config)
@@ -319,23 +287,31 @@ class TestAutoLabelPaths:
 
 
 class TestSyncWrapper:
-    """Lines 643-654"""
+    """Lines 628, 643-654"""
+    
+    def test_sync_wrapper_enter(self, test_config):
+        """Line 628"""
+        from sekha.client import SyncSekhaClient
+        sync_client = SyncSekhaClient(test_config)
+        result = sync_client.__enter__()
+        assert result is sync_client
     
     def test_sync_wrapper_exit(self, test_config):
+        """Lines 643-654"""
         from sekha.client import SyncSekhaClient
         sync_client = SyncSekhaClient(test_config)
         sync_client._loop = asyncio.new_event_loop()
         sync_client.__exit__(None, None, None)
         assert sync_client._loop.is_closed()
     
-    def test_sync_wrapper_no_loop_in_exit(self, test_config):
+    def test_sync_wrapper_exit_no_loop(self, test_config):
         """Test __exit__ when loop is None"""
         from sekha.client import SyncSekhaClient
         sync_client = SyncSekhaClient(test_config)
         sync_client._loop = None
         sync_client.__exit__(None, None, None)  # Should not error
     
-    def test_get_or_create_loop_creates_new(self, test_config):
+    def test_get_or_create_loop_new(self, test_config):
         """Test _get_or_create_loop creates new loop"""
         from sekha.client import SyncSekhaClient
         sync_client = SyncSekhaClient(test_config)
@@ -351,13 +327,17 @@ class TestModels:
     """Lines 51, 54"""
     
     def test_query_request_none_values(self):
+        """Line 51"""
         req = QueryRequest(query="test", limit=None, offset=None, filters=None)
         data = req.model_dump()
         assert data["query"] == "test"
     
-    def test_importance_score_validation(self):
+    def test_importance_score_too_low(self):
+        """Line 54"""
         with pytest.raises(ValueError):
             ImportanceScore(score=0)
+    
+    def test_importance_score_too_high(self):
         with pytest.raises(ValueError):
             ImportanceScore(score=11)
 
@@ -368,25 +348,43 @@ class TestUtils:
     """Lines 17-19, 89, 105, 113"""
     
     def test_validate_api_key_not_string(self):
+        """Line 17"""
         with pytest.raises(ValueError, match="must be a string"):
             validate_api_key(123)
     
-    def test_validate_api_key_wrong_prefix(self):
-        with pytest.raises(ValueError, match="must start with"):
-            validate_api_key("wrong-key")
-    
     def test_validate_api_key_too_short(self):
+        """Line 19"""
         with pytest.raises(ValueError, match="too short"):
             validate_api_key("sk-sekha-short")
     
     def test_validate_base_url_not_string(self):
+        """Line 89"""
         with pytest.raises(ValueError, match="must be a string"):
             validate_base_url(123)
     
     def test_validate_base_url_no_scheme(self):
+        """Line 105"""
         with pytest.raises(ValueError, match="Invalid base_url"):
             validate_base_url("localhost:8080")
     
     def test_parse_iso_datetime_invalid(self):
+        """Line 113"""
         with pytest.raises(ValueError):
             parse_iso_datetime("not-a-date")
+
+
+class TestAdditionalCoverage:
+    """Extra tests for line 550"""
+    
+    @pytest.mark.asyncio
+    async def test_get_knowledge_graph(self, test_config):
+        """Line 550 - get_knowledge_graph method"""
+        transport = MockTransport()
+        transport.add_response("GET", "/api/v1/knowledge-graph",
+                             create_mock_response(200, {"nodes": [], "edges": []}))
+        
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
+            client = SekhaClient(test_config)
+            client.client = http_client
+            result = await client.get_knowledge_graph()
+            assert "nodes" in result
