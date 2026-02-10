@@ -4,6 +4,8 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org)
+[![CI](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions)
 [![PyPI](https://img.shields.io/badge/pypi-coming--soon-orange.svg)](https://pypi.org)
 
 ---
@@ -19,7 +21,7 @@ Official Python client library for interacting with Sekha Controller.
 - ✅ Async/await support
 - ✅ Retry logic & error handling
 - ✅ Pydantic models
-- ✅ 100% test coverage
+- ✅ 91% test coverage
 
 ---
 
