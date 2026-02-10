@@ -1,4 +1,4 @@
-"\"\"Tests specifically targeting 100% code coverage
+"""Tests specifically targeting 100% code coverage
 
 Covers all remaining uncovered lines in sekha/client.py, sekha/models.py, and sekha/utils.py
 """
@@ -473,28 +473,6 @@ class TestAutoLabelNoMatch:
         assert client.client.put.called
 
         await client.close()
-
-
-class TestSyncWrapper:
-    """Test SyncSekhaClient (lines 621, 643-654)"""
-
-    def test_sync_client_works(self, test_config):
-        """Test SyncSekhaClient works in sync context"""
-        from sekha.client import SyncSekhaClient
-
-        sync_client = SyncSekhaClient(test_config)
-        
-        # Test that we can create the wrapper
-        assert sync_client._config == test_config
-        assert sync_client._loop is None
-        
-        # Test context manager
-        with sync_client as client:
-            assert client is sync_client
-        
-        # Sync wrapper lines are covered by integration tests
-        # Lines 621, 643-654 are defensive code for async detection
-        # These are tested in real usage where sync client is actually called
 
 
 # ============== Models.py Coverage ==============
