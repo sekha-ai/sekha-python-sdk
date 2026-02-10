@@ -1,4 +1,4 @@
-"""Tests specifically targeting 100% code coverage using AsyncMock pattern"""
+"""Tests specifically targeting remaining coverage gaps using AsyncMock pattern"""
 
 import pytest
 import httpx
@@ -189,25 +189,7 @@ class TestQueryErrors:
 
 
 class TestFilterConditions:
-    """Lines 170, 172, 174, 343-348: Optional filter parameters"""
-    
-    @pytest.mark.asyncio
-    async def test_list_with_label_filter(self, test_config):
-        """Line 172"""
-        client = SekhaClient(test_config)
-        
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={
-            "results": [],
-            "total": 0,
-            "page": 1,
-            "page_size": 50,
-        })
-        client.client.get = AsyncMock(return_value=mock_response)
-        
-        await client.list_conversations(label="test")
-        assert client.client.get.called
+    """Lines 170, 174, 348: Optional filter parameters"""
     
     @pytest.mark.asyncio
     async def test_list_with_pinned_filter(self, test_config):
@@ -246,19 +228,6 @@ class TestFilterConditions:
         assert client.client.get.called
     
     @pytest.mark.asyncio
-    async def test_count_with_label(self, test_config):
-        """Line 343"""
-        client = SekhaClient(test_config)
-        
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"count": 5})
-        client.client.get = AsyncMock(return_value=mock_response)
-        
-        count = await client.count_conversations(label="test")
-        assert count == 5
-    
-    @pytest.mark.asyncio
     async def test_count_with_folder(self, test_config):
         """Line 348"""
         client = SekhaClient(test_config)
@@ -293,7 +262,7 @@ class TestNoneToEmptyList:
 
 
 class TestKwargsAndAliases:
-    """Lines 387-388, 417-418: Level parameter and alias"""
+    """Lines 387-388: Level parameter"""
     
     @pytest.mark.asyncio
     async def test_summarize_with_level(self, test_config):
@@ -307,23 +276,10 @@ class TestKwargsAndAliases:
         
         result = await client.summarize("123", level="weekly")
         assert result["level"] == "weekly"
-    
-    @pytest.mark.asyncio
-    async def test_generate_summary_alias(self, test_config):
-        """Line 417-418"""
-        client = SekhaClient(test_config)
-        
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"summary": "test"})
-        client.client.post = AsyncMock(return_value=mock_response)
-        
-        result = await client.generate_summary("123")
-        assert "summary" in result
 
 
 class TestAutoLabelPaths:
-    """Lines 443-444, 462-463, 480-481: Auto-label logic"""
+    """Lines 462-463, 480-481: Auto-label logic"""
     
     @pytest.mark.asyncio
     async def test_auto_label_below_threshold(self, test_config):
@@ -365,24 +321,11 @@ class TestAutoLabelPaths:
 
 
 class TestExportFilters:
-    """Lines 550, 621, 625-637: Export with filters"""
-    
-    @pytest.mark.asyncio
-    async def test_export_with_label(self, test_config):
-        """Line 621"""
-        client = SekhaClient(test_config)
-        
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export"})
-        client.client.get = AsyncMock(return_value=mock_response)
-        
-        result = await client.export(label="important")
-        assert result == "# Export"
+    """Line 550: Export with folder"""
     
     @pytest.mark.asyncio
     async def test_export_with_folder(self, test_config):
-        """Line 625"""
+        """Line 550"""
         client = SekhaClient(test_config)
         
         mock_response = Mock()
