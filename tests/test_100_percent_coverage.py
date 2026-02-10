@@ -4,6 +4,7 @@ Covers all remaining uncovered lines in sekha/client.py, sekha/models.py, and se
 """
 
 import pytest
+import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 import httpx
 from datetime import datetime
@@ -478,25 +479,20 @@ class TestAutoLabelNoMatch:
 class TestSyncWrapper:
     """Test SyncSekhaClient error cases (lines 643-654)"""
 
-    def test_sync_client_in_async_context(self, test_config):
-        """Test SyncSekhaClient raises error in async context"""
+    @pytest.mark.asyncio
+    async def test_sync_client_in_async_context(self, test_config):
+        """Test SyncSekhaClient detects and rejects async context"""
         from sekha.client import SyncSekhaClient
 
         sync_client = SyncSekhaClient(test_config)
 
-        # Patch get_running_loop in the sekha.client module where it's used
-        with patch("sekha.client.asyncio.get_running_loop") as mock_loop:
-            mock_loop.return_value = Mock(spec=['is_running'])
-
-            with pytest.raises(
-                RuntimeError, match="SyncSekhaClient cannot be used within an async context"
-            ):
-                sync_client.create_conversation(
-                    NewConversation(
-                        label="test",
-                        messages=[MessageDto(role=MessageRole.USER, content="test")],
-                    )
-                )
+        # We're already in async context (pytest.mark.asyncio)
+        # _get_or_create_loop should detect this and raise RuntimeError
+        with pytest.raises(
+            RuntimeError, match="SyncSekhaClient cannot be used within an async context"
+        ):
+            # Call the internal method directly to test the check
+            sync_client._get_or_create_loop()
 
 
 # ============== Models.py Coverage ==============
