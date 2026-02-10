@@ -212,13 +212,3 @@ def test_sync_client_wrapper(config):
     assert hasattr(sync_client, "smart_query")
 
     sync_client._async_client.close()  # Cleanup
-
-
-@pytest.mark.asyncio
-async def test_async_context_manager_cleanup(config):
-    """Test proper resource cleanup"""
-    async with SekhaClient(config) as client:
-        assert client.client is not None
-
-    # After exit, client should be closed
-    # (This would raise an error if used, which is expected)

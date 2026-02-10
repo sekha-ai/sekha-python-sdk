@@ -3,6 +3,7 @@
 import asyncio
 import httpx
 from typing import Optional, List, Dict, Any
+from dataclasses import dataclass
 import backoff
 
 # Explicit imports instead of wildcard
@@ -20,8 +21,9 @@ from .models import (
     NewConversation,
     QueryRequest,
     QueryResponse,
+    MessageDto,
 )
-from .utils import RateLimiter, validate_api_key
+from .utils import RateLimiter, validate_api_key, validate_base_url
 
 
 class SekhaClient:
@@ -509,7 +511,7 @@ class SyncSekhaClient:
     def _get_or_create_loop(self) -> asyncio.AbstractEventLoop:
         """Get existing event loop or create new one"""
         try:
-            asyncio.get_running_loop()
+            _loop = asyncio.get_running_loop()
             # We're already in an async context, can't use asyncio.run
             raise RuntimeError(
                 "SyncSekhaClient cannot be used within an async context. "
