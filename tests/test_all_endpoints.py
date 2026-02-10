@@ -1,22 +1,15 @@
-"""
-Comprehensive test suite for all 19 Sekha controller endpoints
-"""
+"""Comprehensive test suite for all 19 Sekha controller endpoints"""
 
 import pytest
 import uuid
-from sekha import SekhaClient, ClientConfig
+from sekha import SekhaClient
 from sekha.models import NewConversation, MessageDto, MessageRole
 
 
 @pytest.fixture
-def client():
+def client(test_config):
     """Create test client"""
-    config = ClientConfig(
-        api_key="test-key",
-        base_url="http://localhost:8080",
-        timeout=5.0,
-    )
-    return SekhaClient(config)
+    return SekhaClient(test_config)
 
 
 @pytest.fixture
@@ -197,7 +190,7 @@ class TestHealthMetrics:
 class TestEndpointCoverage:
     """Validate all 19 endpoints are implemented"""
 
-    def test_all_endpoints_mapped(self):
+    def test_all_endpoints_mapped(self, test_config):
         """Ensure SekhaClient has methods for all 19 endpoints"""
         client_methods = [
             # Conversation CRUD (9)
@@ -222,8 +215,7 @@ class TestEndpointCoverage:
             "suggest_labels",
         ]
 
-        config = ClientConfig(api_key="test", base_url="http://localhost:8080")
-        client = SekhaClient(config)
+        client = SekhaClient(test_config)
 
         for method in client_methods:
             assert hasattr(client, method), f"SekhaClient missing method: {method}"
