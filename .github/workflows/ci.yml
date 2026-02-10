@@ -196,6 +196,27 @@ jobs:
           base_url = "http://localhost:11434"
           timeout_secs = 120
           priority = 1
+          
+          [[llm_providers.models]]
+          model_id = "nomic-embed-text:latest"
+          task = "embedding"
+          context_window = 512
+          dimension = 768
+          
+          [[llm_providers.models]]
+          model_id = "llama3.1:8b"
+          task = "chat_small"
+          context_window = 8192
+          
+          [[llm_providers.models]]
+          model_id = "llama3.1:8b"
+          task = "chat_smart"
+          context_window = 8192
+          
+          [default_models]
+          embedding = "nomic-embed-text:latest"
+          chat_fast = "llama3.1:8b"
+          chat_smart = "llama3.1:8b"
           EOF
 
       - name: Start controller
