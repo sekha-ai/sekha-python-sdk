@@ -357,6 +357,10 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Query failed: {e}")
 
+    async def smart_query(self, query: str, **kwargs) -> QueryResponse:
+        """Alias for query() - semantic query with smart ranking"""
+        return await self.query(query, **kwargs)
+
     async def full_text_search(self, query: str, limit: int = 10) -> Dict[str, Any]:
         """Full-text search using SQLite FTS5"""
         await self.rate_limiter.acquire()
@@ -439,6 +443,10 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Failed to generate summary: {e}")
 
+    async def generate_summary(self, conversation_id: str, **kwargs) -> Dict[str, Any]:
+        """Alias for summarize() - generate summary for conversation"""
+        return await self.summarize(conversation_id, **kwargs)
+
     async def prune_dry_run(self, threshold_days: int = 90) -> Dict[str, Any]:
         """Get pruning suggestions without executing"""
         await self.rate_limiter.acquire()
@@ -453,6 +461,10 @@ class SekhaClient:
 
         except Exception as e:
             raise SekhaError(f"Failed to get pruning suggestions: {e}")
+
+    async def get_pruning_suggestions(self, **kwargs) -> Dict[str, Any]:
+        """Alias for prune_dry_run() - get pruning suggestions"""
+        return await self.prune_dry_run(**kwargs)
 
     async def prune_execute(self, conversation_ids: List[str]) -> None:
         """Execute pruning (archive conversations)"""
@@ -482,6 +494,109 @@ class SekhaClient:
 
         except Exception as e:
             raise SekhaError(f"Failed to suggest labels: {e}")
+
+    async def auto_label(
+        self, conversation_id: str, threshold: float = 0.7
+    ) -> Optional[str]:
+        """
+        Auto-label conversation if confidence meets threshold
+
+        Args:
+            conversation_id: Conversation UUID
+            threshold: Minimum confidence score (0.0-1.0)
+
+        Returns:
+            Applied label or None if no confident match
+        """
+        suggestions = await self.suggest_labels(conversation_id)
+
+        # Find first suggestion above threshold
+        for suggestion in suggestions.get("suggestions", []):
+            if suggestion.get("confidence", 0) >= threshold:
+                label = suggestion["label"]
+                # Apply the label
+                await self.update_label(
+                    conversation_id, label, suggestion.get("folder", "/")
+                )
+                return label
+
+        return None
+
+    # ============== Additional Features ==============
+
+    async def export(
+        self,
+        label: Optional[str] = None,
+        folder: Optional[str] = None,
+        format: str = "markdown",
+    ) -> str:
+        """
+        Export conversations to markdown or JSON
+
+        Args:
+            label: Optional label filter
+            folder: Optional folder filter
+            format: Export format ('markdown' or 'json')
+
+        Returns:
+            Exported content as string
+        """
+        await self.rate_limiter.acquire()
+
+        params: Dict[str, str] = {"format": format}
+        if label:
+            params["label"] = label
+        if folder:
+            params["folder"] = folder
+
+        try:
+            response = await self.client.get("/api/v1/export", params=params)
+            response.raise_for_status()
+            data = response.json()
+            return data["content"]
+
+        except Exception as e:
+            raise SekhaError(f"Failed to export: {e}")
+
+    async def score_message_importance(self, message_id: str) -> Dict[str, Any]:
+        """
+        Score importance of a message
+
+        Args:
+            message_id: Message UUID
+
+        Returns:
+            Importance score and factors
+        """
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post(
+                "/api/v1/messages/score",
+                json={"message_id": message_id},
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to score message: {e}")
+
+    async def get_mcp_tools(self) -> List[Dict[str, Any]]:
+        """
+        Get available MCP (Model Context Protocol) tools
+
+        Returns:
+            List of available tools with descriptions
+        """
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.get("/api/v1/mcp/tools")
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to get MCP tools: {e}")
 
 
 # ============== Sync Wrapper ==============
