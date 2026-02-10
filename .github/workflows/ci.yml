@@ -53,7 +53,7 @@ jobs:
 
 
   test:
-    name: Test with Python ${{ matrix.python-version }}
+    name: Unit Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -86,14 +86,13 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         run: |
-          pytest tests/ -v --cov=sekha --cov-report=xml --cov-report=term-missing
-
-      - name: Check coverage threshold
-        if: matrix.python-version == '3.14'
-        run: |
-          coverage report --fail-under=90
+          pytest tests/ -v \
+            --cov=sekha \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=90
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.14'
@@ -108,7 +107,7 @@ jobs:
 
 
   integration-test:
-    name: Integration Test with Controller
+    name: Integration Tests - Contract Validation
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -243,7 +242,7 @@ jobs:
             sleep 1
           done
 
-      - name: Install SDK and run integration tests
+      - name: Run integration tests (no coverage)
         working-directory: sdk
         env:
           SEKHA_INTEGRATION_TESTS: "1"
@@ -255,7 +254,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
           
-          pytest tests/ -v -k "test_all_endpoints or test_create_conversation"
+          pytest tests/ -v --no-cov -k "test_all_endpoints or test_create_conversation"
 
       - name: Cleanup
         if: always()
