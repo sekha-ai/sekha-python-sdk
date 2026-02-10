@@ -1,6 +1,4 @@
-"""
-Main client for interacting with Sekha API
-"""
+"""Main client for interacting with Sekha API"""
 
 import asyncio
 import httpx
@@ -8,33 +6,24 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 import backoff
 
-from .models import *
-from .errors import *
-from .utils import RateLimiter, ExponentialBackoff, validate_api_key, validate_base_url
-
-
-@dataclass
-class ClientConfig:
-    """Client configuration"""
-
-    api_key: str
-    base_url: str = "http://localhost:8080"
-    timeout: float = 30.0
-    max_retries: int = 3
-    rate_limit_requests: int = 1000  # per minute
-    rate_limit_window: float = 60.0
-    default_label: Optional[str] = None
-
-    def __post_init__(self):
-        """Validate configuration after initialization"""
-        validate_api_key(self.api_key)
-        validate_base_url(self.base_url)
-
-        if self.timeout <= 0:
-            raise ValueError("timeout must be positive")
-
-        if self.max_retries < 0:
-            raise ValueError("max_retries must be non-negative")
+# Explicit imports instead of wildcard
+from .errors import (
+    SekhaError,
+    SekhaAPIError,
+    SekhaAuthError,
+    SekhaConnectionError,
+    SekhaNotFoundError,
+    SekhaValidationError,
+)
+from .models import (
+    ClientConfig,
+    ConversationResponse,
+    NewConversation,
+    QueryRequest,
+    QueryResponse,
+    MessageDto,
+)
+from .utils import RateLimiter, validate_api_key, validate_base_url
 
 
 class SekhaClient:
@@ -58,7 +47,6 @@ class SekhaClient:
         self.rate_limiter = RateLimiter(
             config.rate_limit_requests, config.rate_limit_window
         )
-        self.backoff = ExponentialBackoff(base_delay=0.5, max_delay=10.0, factor=2.0)
 
         # Create httpx client with connection pooling
         self.client = httpx.AsyncClient(
@@ -167,15 +155,24 @@ class SekhaClient:
     async def list_conversations(
         self,
         label: Optional[str] = None,
+        folder: Optional[str] = None,
+        pinned: Optional[bool] = None,
+        archived: Optional[bool] = None,
         page: int = 1,
         page_size: int = 50,
-    ) -> List[ConversationResponse]:
+    ) -> QueryResponse:
         """List conversations with optional filtering"""
         await self.rate_limiter.acquire()
 
         params: Dict[str, Any] = {"page": page, "page_size": page_size}
         if label:
             params["label"] = label
+        if folder:
+            params["folder"] = folder
+        if pinned is not None:
+            params["pinned"] = pinned
+        if archived is not None:
+            params["archived"] = archived
 
         try:
             response = await self.client.get(
@@ -183,8 +180,7 @@ class SekhaClient:
                 params=params,
             )
             response.raise_for_status()
-            data = response.json()
-            return [ConversationResponse(**conv) for conv in data.get("results", [])]
+            return QueryResponse(**response.json())
 
         except Exception as e:
             raise SekhaError(f"Failed to list conversations: {e}")
@@ -193,14 +189,12 @@ class SekhaClient:
         self,
         conversation_id: str,
         new_label: str,
-        new_folder: Optional[str] = None,
+        new_folder: str,
     ) -> None:
         """Update conversation label and folder"""
         await self.rate_limiter.acquire()
 
-        body = {"label": new_label}
-        if new_folder:
-            body["folder"] = new_folder
+        body = {"label": new_label, "folder": new_folder}
 
         try:
             response = await self.client.put(
@@ -214,6 +208,62 @@ class SekhaClient:
                 raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
             raise SekhaAPIError(
                 "Failed to update label", e.response.status_code, e.response.text
+            )
+
+    async def update_folder(
+        self,
+        conversation_id: str,
+        new_folder: str,
+    ) -> None:
+        """Update conversation folder"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.put(
+                f"/api/v1/conversations/{conversation_id}/folder",
+                json={"folder": new_folder},
+            )
+            response.raise_for_status()
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
+            raise SekhaAPIError(
+                "Failed to update folder", e.response.status_code, e.response.text
+            )
+
+    async def pin_conversation(self, conversation_id: str) -> None:
+        """Pin a conversation (sets importance=10)"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.put(
+                f"/api/v1/conversations/{conversation_id}/pin"
+            )
+            response.raise_for_status()
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
+            raise SekhaAPIError(
+                "Failed to pin conversation", e.response.status_code, e.response.text
+            )
+
+    async def archive_conversation(self, conversation_id: str) -> None:
+        """Archive a conversation"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.put(
+                f"/api/v1/conversations/{conversation_id}/archive"
+            )
+            response.raise_for_status()
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
+            raise SekhaAPIError(
+                "Failed to archive conversation", e.response.status_code, e.response.text
             )
 
     async def delete_conversation(self, conversation_id: str) -> None:
@@ -233,34 +283,56 @@ class SekhaClient:
                 "Failed to delete conversation", e.response.status_code, e.response.text
             )
 
-    # ============== Smart Query ==============
+    async def count_conversations(
+        self, label: Optional[str] = None, folder: Optional[str] = None
+    ) -> int:
+        """Count conversations with optional filtering"""
+        await self.rate_limiter.acquire()
 
-    # Find smart_query method (around line 259-267)
+        params: Dict[str, str] = {}
+        if label:
+            params["label"] = label
+        if folder:
+            params["folder"] = folder
 
-    async def smart_query(
+        try:
+            response = await self.client.get(
+                "/api/v1/conversations/count", params=params
+            )
+            response.raise_for_status()
+            return response.json()["count"]
+
+        except Exception as e:
+            raise SekhaError(f"Failed to count conversations: {e}")
+
+    # ============== Query & Search ==============
+
+    async def query(
         self,
         query: str,
         limit: Optional[int] = None,
+        offset: Optional[int] = None,
         filters: Optional[Dict[str, Any]] = None,
     ) -> QueryResponse:
         """
-        Intelligent context assembly using MemoryOrchestrator
+        Semantic query using vector similarity search
 
         Args:
             query: Search query
             limit: Max results
+            offset: Pagination offset
             filters: Metadata filters
 
         Returns:
-            Query response with assembled context
+            Query response with results
         """
         await self.rate_limiter.acquire()
 
-        body = QueryRequest(query=query, limit=limit, filters=filters)
+        body = QueryRequest(query=query, limit=limit, offset=offset, filters=filters)
 
         try:
             response = await self.client.post(
-                "/api/v1/query/smart",
+                "/api/v1/query",
                 json=body.model_dump(),
             )
             response.raise_for_status()
@@ -273,210 +345,146 @@ class SekhaClient:
                 raise SekhaAuthError("Invalid API key")
             else:
                 raise SekhaAPIError(
-                    f"Smart query failed: {e.response.text}",
+                    f"Query failed: {e.response.text}",
                     e.response.status_code,
                     e.response.text,
                 )
         except httpx.TimeoutException:
-            raise SekhaConnectionError("Smart query timed out")
+            raise SekhaConnectionError("Query timed out")
         except httpx.ConnectError as e:
             raise SekhaConnectionError(f"Connection failed: {e}")
         except Exception as e:
-            raise SekhaError(f"Smart query failed: {e}")
+            raise SekhaError(f"Query failed: {e}")
 
-    # ============== Importance Scoring ==============
-
-    async def score_message_importance(
-        self,
-        message_id: str,
-    ) -> ImportanceScore:
-        """Score a message's importance 1-10 using LLM"""
+    async def full_text_search(
+        self, query: str, limit: int = 10
+    ) -> Dict[str, Any]:
+        """Full-text search using SQLite FTS5"""
         await self.rate_limiter.acquire()
 
         try:
             response = await self.client.post(
-                f"/api/v1/messages/{message_id}/importance",
+                "/api/v1/search/fts",
+                json={"query": query, "limit": limit},
             )
-            response.raise_for_status()
-            return ImportanceScore(**response.json())
-
-        except Exception as e:
-            raise SekhaError(f"Failed to score message: {e}")
-
-    # ============== Summarization ==============
-
-    async def generate_summary(
-        self,
-        conversation_id: str,
-        level: SummaryLevel = SummaryLevel.DAILY,
-    ) -> SummaryResponse:
-        """Generate hierarchical summary for conversation"""
-        await self.rate_limiter.acquire()
-
-        try:
-            response = await self.client.post(
-                f"/api/v1/conversations/{conversation_id}/summary",
-                params={"level": level.value},
-            )
-            response.raise_for_status()
-            return SummaryResponse(**response.json())
-
-        except Exception as e:
-            raise SekhaError(f"Failed to generate summary: {e}")
-
-    # ============== Pruning ==============
-
-    async def get_pruning_suggestions(
-        self,
-        threshold_days: int = 90,
-        importance_threshold: float = 3.0,
-    ) -> List[PruningSuggestion]:
-        """Get intelligent pruning suggestions"""
-        await self.rate_limiter.acquire()
-
-        try:
-            response = await self.client.get(
-                "/api/v1/prune/suggestions",
-                params={
-                    "threshold_days": threshold_days,
-                    "importance_threshold": importance_threshold,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            return [PruningSuggestion(**s) for s in data]
-
-        except Exception as e:
-            raise SekhaError(f"Failed to get pruning suggestions: {e}")
-
-    # ============== Label Intelligence ==============
-
-    async def suggest_labels(
-        self,
-        conversation_id: str,
-    ) -> List[LabelSuggestion]:
-        """Get auto-label suggestions for conversation"""
-        await self.rate_limiter.acquire()
-
-        try:
-            response = await self.client.post(
-                f"/api/v1/conversations/{conversation_id}/suggest-labels",
-            )
-            response.raise_for_status()
-            data = response.json()
-            return [LabelSuggestion(**s) for s in data]
-
-        except Exception as e:
-            raise SekhaError(f"Failed to suggest labels: {e}")
-
-    async def auto_label(
-        self,
-        conversation_id: str,
-        threshold: float = 0.7,
-    ) -> Optional[str]:
-        """
-        Auto-apply label if confidence exceeds threshold
-
-        Returns:
-            Applied label or None if no label met threshold
-        """
-        suggestions = await self.suggest_labels(conversation_id)
-
-        for suggestion in suggestions:
-            if suggestion.confidence >= threshold:
-                await self.update_label(
-                    conversation_id,
-                    suggestion.label,
-                )
-                return suggestion.label
-
-        return None
-
-    # ============== Pin, Archive, Export ==================
-    async def pin(self, conversation_id: str) -> None:
-        """Pin a conversation (status = 'pinned')"""
-        await self._update_status(conversation_id, "pinned")
-
-    async def archive(self, conversation_id: str) -> None:
-        """Archive a conversation (status = 'archived')"""
-        await self._update_status(conversation_id, "archived")
-
-    async def export(
-        self, label: Optional[str] = None, format: str = "markdown"
-    ) -> str:
-        """Export conversations to specified format
-
-        Args:
-            label: Optional label filter (exports all if None)
-            format: "markdown" or "json"
-
-        Returns:
-            Exported content as string
-
-        Raises:
-            SekhaValidationError: Invalid format parameter
-            SekhaAPIError: API returned error
-        """
-        await self.rate_limiter.acquire()
-
-        params = {"format": format}
-        if label:
-            params["label"] = label
-
-        try:
-            response = await self.client.get(
-                "/api/v1/export",
-                params=params,
-            )
-            response.raise_for_status()
-
-            data = response.json()
-            return data["content"]
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 400:
-                raise SekhaValidationError("Invalid export parameters", e.response.text)
-            raise SekhaAPIError(
-                "Export failed", e.response.status_code, e.response.text
-            )
-        except Exception as e:
-            raise SekhaError(f"Export failed: {e}")
-
-    async def _update_status(self, conversation_id: str, status: str) -> None:
-        """Internal method to update conversation status"""
-        await self.rate_limiter.acquire()
-
-        try:
-            response = await self.client.put(
-                f"/api/v1/conversations/{conversation_id}/status",
-                json={"status": status},
-            )
-            response.raise_for_status()
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise SekhaNotFoundError(f"Conversation {conversation_id} not found")
-            elif e.response.status_code == 400:
-                raise SekhaValidationError("Invalid status", e.response.text)
-            raise SekhaAPIError(
-                "Status update failed", e.response.status_code, e.response.text
-            )
-        except Exception as e:
-            raise SekhaError(f"Status update failed: {e}")
-
-    # ============== MCP Integration (future) ==============
-
-    async def get_mcp_tools(self) -> List[Dict[str, Any]]:
-        """List available MCP tools"""
-        await self.rate_limiter.acquire()
-
-        try:
-            response = await self.client.get("/mcp/tools")
             response.raise_for_status()
             return response.json()
 
         except Exception as e:
-            raise SekhaError(f"Failed to get MCP tools: {e}")
+            raise SekhaError(f"Full-text search failed: {e}")
+
+    async def rebuild_embeddings(self) -> None:
+        """Trigger rebuild of all embeddings"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post("/api/v1/rebuild-embeddings")
+            response.raise_for_status()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to rebuild embeddings: {e}")
+
+    # ============== Memory Orchestration ==============
+
+    async def assemble_context(
+        self,
+        query: str,
+        preferred_labels: Optional[List[str]] = None,
+        context_budget: int = 4000,
+        excluded_folders: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Assemble intelligent context for a query"""
+        await self.rate_limiter.acquire()
+
+        body = {
+            "query": query,
+            "preferred_labels": preferred_labels or [],
+            "context_budget": context_budget,
+            "excluded_folders": excluded_folders or [],
+        }
+
+        try:
+            response = await self.client.post(
+                "/api/v1/context/assemble",
+                json=body,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to assemble context: {e}")
+
+    async def summarize(
+        self, conversation_id: str, level: str = "daily"
+    ) -> Dict[str, Any]:
+        """
+        Generate hierarchical summary
+
+        Args:
+            conversation_id: Conversation UUID
+            level: "daily", "weekly", or "monthly"
+
+        Returns:
+            Summary response
+        """
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post(
+                "/api/v1/summarize",
+                json={"conversation_id": conversation_id, "level": level},
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to generate summary: {e}")
+
+    async def prune_dry_run(
+        self, threshold_days: int = 90
+    ) -> Dict[str, Any]:
+        """Get pruning suggestions without executing"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post(
+                "/api/v1/prune/dry-run",
+                json={"threshold_days": threshold_days},
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to get pruning suggestions: {e}")
+
+    async def prune_execute(self, conversation_ids: List[str]) -> None:
+        """Execute pruning (archive conversations)"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post(
+                "/api/v1/prune/execute",
+                json={"conversation_ids": conversation_ids},
+            )
+            response.raise_for_status()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to execute pruning: {e}")
+
+    async def suggest_labels(self, conversation_id: str) -> Dict[str, Any]:
+        """Get AI-powered label suggestions"""
+        await self.rate_limiter.acquire()
+
+        try:
+            response = await self.client.post(
+                "/api/v1/labels/suggest",
+                json={"conversation_id": conversation_id},
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except Exception as e:
+            raise SekhaError(f"Failed to suggest labels: {e}")
 
 
 # ============== Sync Wrapper ==============
@@ -487,34 +495,55 @@ class SyncSekhaClient:
     Synchronous wrapper for SekhaClient
 
     All async methods are available as sync methods.
-    Uses httpx.Client internally with same config.
     """
 
     def __init__(self, config: ClientConfig):
-        self._async_client = SekhaClient(config)
+        self._config = config
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._async_client.sync_client.close()
+        if self._loop and not self._loop.is_closed():
+            self._loop.close()
+
+    def _get_or_create_loop(self) -> asyncio.AbstractEventLoop:
+        """Get existing event loop or create new one"""
+        try:
+            loop = asyncio.get_running_loop()
+            # We're already in an async context, can't use asyncio.run
+            raise RuntimeError(
+                "SyncSekhaClient cannot be used within an async context. "
+                "Use SekhaClient directly instead."
+            )
+        except RuntimeError:
+            # No running loop, create new one
+            if self._loop is None or self._loop.is_closed():
+                self._loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self._loop)
+            return self._loop
 
     def __getattr__(self, name: str):
         """Delegate to async client"""
-        async_method = getattr(self._async_client, name)
-
-        if not asyncio.iscoroutinefunction(async_method):
-            return async_method
 
         def sync_wrapper(*args, **kwargs):
-            # Simpler than maintaining full sync/async duplication
-            import asyncio
+            loop = self._get_or_create_loop()
+            async_client = SekhaClient(self._config)
 
-            return asyncio.run(async_method(*args, **kwargs))
+            async def run_async():
+                try:
+                    async with async_client:
+                        method = getattr(async_client, name)
+                        return await method(*args, **kwargs)
+                finally:
+                    await async_client.close()
+
+            return loop.run_until_complete(run_async())
 
         return sync_wrapper
 
 
-# Alias for backward compatibility and to match implementation plan
+# Alias for backward compatibility
 MemoryController = SekhaClient
 MemoryConfig = ClientConfig
