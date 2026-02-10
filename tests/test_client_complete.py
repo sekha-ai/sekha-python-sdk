@@ -1,5 +1,4 @@
-"""
-Complete integration tests for SekhaClient
+"""Complete integration tests for SekhaClient
 Tests all major API endpoints with realistic scenarios
 """
 
