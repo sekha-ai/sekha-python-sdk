@@ -9,10 +9,10 @@ from typing import Optional, List, Dict, Any, AsyncIterator
 from dataclasses import dataclass
 
 from .client import SekhaClient as MemoryController
+from .models import ClientConfig  # Import the dataclass, not TypedDict
 from .types import (
     Message,
     MessageContent,
-    MemoryConfig,
 )
 
 # Note: MCP and Bridge clients will be implemented separately
@@ -202,8 +202,8 @@ class SekhaClient:
             rate_limit_window=rate_limit_window,
         )
         
-        # Initialize Memory Controller
-        controller_config = MemoryConfig(
+        # Initialize Memory Controller with ClientConfig dataclass
+        controller_config = ClientConfig(
             base_url=controller_url,
             api_key=api_key,
             default_label=default_label,
