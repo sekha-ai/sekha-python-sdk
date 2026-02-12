@@ -1,17 +1,17 @@
-"""Tests for SekhaClient"""
+"""Tests for MemoryController (sekha.client.SekhaClient)"""
 
 import pytest
 from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
-from sekha import SekhaClient, MessageRole
+from sekha import MemoryController, MessageRole
 from sekha.types import CreateConversationRequest, Message, Conversation
 
 
 @pytest.fixture
 def mock_client(test_config):
     """Create a client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
 
     # Create a mock that tracks calls but allows method assignment
     mock_httpx_client = AsyncMock()
