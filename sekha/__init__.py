@@ -1,71 +1,91 @@
 """
-Sekha AI Memory System - Python SDK
+Sekha Python SDK - AI-Powered Memory System
+
+Provides both async and sync clients for interacting with Sekha Memory Controller.
 """
 
-from .client import (
-    SekhaClient,
-    SyncSekhaClient,
-    ClientConfig,
-    MemoryController,
-    MemoryConfig,
-)
-from .models import (
-    MessageRole,
-    ConversationStatus,
-    SummaryLevel,
-    MessageDto,
-    NewConversation,
-    ConversationResponse,
-    QueryRequest,
-    QueryResult,
-    QueryResponse,
-    LabelSuggestion,
-    PruningSuggestion,
-    HealthResponse,
-    ImportanceScore,
-    SummaryResponse,
-)
+from .client import SekhaClient, SyncSekhaClient, MemoryController
 from .errors import (
     SekhaError,
     SekhaAPIError,
-    SekhaNotFoundError,
     SekhaAuthError,
     SekhaConnectionError,
+    SekhaNotFoundError,
     SekhaValidationError,
-    SekhaRateLimitError,
+)
+from .types import (
+    # Core Models
+    Message,
+    MessageContent,
+    ContentPart,
+    Conversation,
+    ConversationStatus,
+    MessageRole,
+    # Configuration
+    MemoryConfig,
+    # Request Types
+    CreateConversationRequest,
+    QueryRequest,
+    ContextAssembleRequest,
+    PruneRequest,
+    # Response Types
+    QueryResponse,
+    SearchResult,
+    PruneResponse,
+    PruningSuggestion,
+    LabelSuggestion,
+    SummaryResponse,
+    # Enums
+    SummaryLevel,
+    PruneRecommendation,
+    # Type Guards
+    is_multi_modal_content,
+    extract_text,
+    extract_image_urls,
+    has_images,
 )
 
-__version__ = "0.5.0"
-__author__ = "Sekha AI <team@sekha.ai>"
+__version__ = "0.6.0"
 
 __all__ = [
-    # Client
+    # Clients
     "SekhaClient",
     "SyncSekhaClient",
-    "ClientConfig",
-    "MemoryController",  # Alias for SekhaClient
-    "MemoryConfig",  # Alias for ClientConfig
-    # Models
-    "MessageRole",
-    "ConversationStatus",
-    "SummaryLevel",
-    "MessageDto",
-    "NewConversation",
-    "ConversationResponse",
-    "QueryRequest",
-    "QueryResult",
-    "QueryResponse",
-    "LabelSuggestion",
-    "PruningSuggestion",
-    "HealthResponse",
-    "ImportanceScore",
-    "SummaryResponse",
+    "MemoryController",
     # Errors
     "SekhaError",
     "SekhaAPIError",
-    "SekhaNotFoundError",
     "SekhaAuthError",
     "SekhaConnectionError",
+    "SekhaNotFoundError",
     "SekhaValidationError",
-    "SekhaRateLimitError",
+    # Types - Core
+    "Message",
+    "MessageContent",
+    "ContentPart",
+    "Conversation",
+    "ConversationStatus",
+    "MessageRole",
+    # Types - Config
+    "MemoryConfig",
+    # Types - Requests
+    "CreateConversationRequest",
+    "QueryRequest",
+    "ContextAssembleRequest",
+    "PruneRequest",
+    # Types - Responses
+    "QueryResponse",
+    "SearchResult",
+    "PruneResponse",
+    "PruningSuggestion",
+    "LabelSuggestion",
+    "SummaryResponse",
+    # Enums
+    "SummaryLevel",
+    "PruneRecommendation",
+    # Type Guards
+    "is_multi_modal_content",
+    "extract_text",
+    "extract_image_urls",
+    "has_images",
 ]
