@@ -10,7 +10,7 @@ import pytest
 import uuid
 import os
 from unittest.mock import Mock, AsyncMock
-from sekha import SekhaClient, MessageRole
+from sekha import MemoryController, MessageRole
 from sekha.models import ClientConfig
 from datetime import datetime
 
@@ -29,7 +29,7 @@ def client(test_config):
                 "SEKHA_API_KEY", "sk-sekha-test-token-123456789012345678901234567890"
             ),
         )
-        return SekhaClient(config)
+        return MemoryController(config)
     else:
         # Use mocked client for local development
         return _create_mock_client(test_config)
@@ -37,7 +37,7 @@ def client(test_config):
 
 def _create_mock_client(test_config):
     """Create a mocked client for local testing"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
     client.client = AsyncMock()
 
     # Default mock response
@@ -75,19 +75,18 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_create_conversation(self, client):
         """POST /api/v1/conversations"""
-        from sekha.models import NewConversation, MessageDto
-        from sekha.types import MessageRole
+        from sekha.types import CreateConversationRequest, Message
         
-        conversation = NewConversation(
-            label="test-label",
-            folder="test-folder",
-            messages=[
-                MessageDto(role=MessageRole.USER, content="Hello"),
-                MessageDto(role=MessageRole.ASSISTANT, content="Hi there!"),
+        conversation: CreateConversationRequest = {
+            "label": "test-label",
+            "folder": "test-folder",
+            "messages": [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"},
             ],
-        )
+        }
         response = await client.create_conversation(conversation)
-        assert response.id
+        assert response["id"]
         if not USE_REAL_CONTROLLER:
             assert client.client.post.called
 
@@ -96,7 +95,6 @@ class TestConversationEndpoints:
         """GET /api/v1/conversations/{id}"""
         if not USE_REAL_CONTROLLER:
             # Mock the response
-            from sekha.models import ConversationResponse
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
             mock_response.json = Mock(
@@ -114,7 +112,7 @@ class TestConversationEndpoints:
 
         try:
             response = await client.get_conversation(test_conversation_id)
-            assert response.id == test_conversation_id
+            assert response["id"] == test_conversation_id
         except Exception as e:
             # Real controller might not have this ID
             if USE_REAL_CONTROLLER:
@@ -137,8 +135,8 @@ class TestConversationEndpoints:
             client.client.get = AsyncMock(return_value=mock_response)
 
         response = await client.list_conversations(page=1, page_size=10)
-        assert response.total is not None
-        assert response.results is not None
+        assert response["total"] is not None
+        assert response["results"] is not None
 
     @pytest.mark.asyncio
     async def test_update_label(self, client, test_conversation_id):
@@ -226,8 +224,8 @@ class TestSearchQueryEndpoints:
             limit=10,
             offset=0,
         )
-        assert response.total is not None
-        assert response.results is not None
+        assert response["total"] is not None
+        assert response["results"] is not None
 
     @pytest.mark.asyncio
     async def test_full_text_search(self, client):
@@ -408,7 +406,7 @@ class TestEndpointCoverage:
     """Validate all 19 endpoints are implemented"""
 
     def test_all_endpoints_mapped(self, test_config):
-        """Ensure SekhaClient has methods for all 19 endpoints"""
+        """Ensure MemoryController has methods for all 19 endpoints"""
         client_methods = [
             # Conversation CRUD (9)
             "create_conversation",
@@ -432,13 +430,13 @@ class TestEndpointCoverage:
             "suggest_labels",
         ]
 
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
 
         for method in client_methods:
-            assert hasattr(client, method), f"SekhaClient missing method: {method}"
+            assert hasattr(client, method), f"MemoryController missing method: {method}"
             assert callable(
                 getattr(client, method)
-            ), f"SekhaClient.{method} is not callable"
+            ), f"MemoryController.{method} is not callable"
 
         # Total: 18 client methods + 2 health/metrics (not on client) = 20 total
         print(f"✓ All {len(client_methods)} client methods implemented")
