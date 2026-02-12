@@ -1,72 +1,46 @@
 """
 Pydantic models for type-safe API interaction
+
+This module provides Pydantic models for runtime validation.
+For type hints, prefer importing from types.py which contains
+the canonical TypedDict definitions.
 """
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from dataclasses import dataclass
 from pydantic import BaseModel, Field, ConfigDict
-from enum import Enum
 
+# Import canonical types
+from .types import (
+    MessageRole,
+    ConversationStatus,
+    SummaryLevel,
+    MemoryConfig as MemoryConfigType,
+    MessageContent,
+)
 
-class MessageRole(str, Enum):
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-    TOOL = "tool"
-
-
-class ConversationStatus(str, Enum):
-    ACTIVE = "active"
-    ARCHIVED = "archived"
-    PINNED = "pinned"
-
-
-class SummaryLevel(str, Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-
-
-@dataclass
-class ClientConfig:
-    """Client configuration"""
-
-    api_key: str
-    base_url: str = "http://localhost:8080"
-    timeout: float = 30.0
-    max_retries: int = 3
-    rate_limit_requests: int = 1000  # per minute
-    rate_limit_window: float = 60.0
-    default_label: Optional[str] = None
-
-    def __post_init__(self):
-        """Validate configuration after initialization"""
-        from .utils import validate_api_key, validate_base_url
-
-        validate_api_key(self.api_key)
-        validate_base_url(self.base_url)
-
-        if self.timeout <= 0:
-            raise ValueError("timeout must be positive")
-
-        if self.max_retries < 0:
-            raise ValueError("max_retries must be non-negative")
+# Keep ClientConfig as alias for MemoryConfig
+ClientConfig = MemoryConfigType
 
 
 class MessageDto(BaseModel):
-    """Message data transfer object"""
-
+    """Message data transfer object
+    
+    Note: For type hints, use types.Message instead.
+    This Pydantic model is for runtime validation.
+    """
     role: MessageRole
-    content: str
+    content: str  # Simplified for Pydantic, full MessageContent in types.py
     metadata: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(use_enum_values=True)
 
 
 class NewConversation(BaseModel):
-    """Create a new conversation"""
-
+    """Create a new conversation
+    
+    Note: For type hints, use types.CreateConversationRequest instead.
+    """
     messages: List[MessageDto] = []
     label: str = Field(default="default")
     folder: str = Field(default="default")
@@ -76,8 +50,10 @@ class NewConversation(BaseModel):
 
 
 class ConversationResponse(BaseModel):
-    """Conversation response from API"""
-
+    """Conversation response from API
+    
+    Note: For type hints, use types.Conversation instead.
+    """
     id: str
     label: str
     folder: str
@@ -89,8 +65,10 @@ class ConversationResponse(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    """Query request matching controller DTOs"""
-
+    """Query request matching controller DTOs
+    
+    Note: For type hints, use types.QueryRequest instead.
+    """
     query: str = Field(..., min_length=1)
     limit: Optional[int] = Field(default=10, ge=1, le=1000)
     offset: Optional[int] = Field(default=0, ge=0)
@@ -98,8 +76,10 @@ class QueryRequest(BaseModel):
 
 
 class QueryResult(BaseModel):
-    """Single search result"""
-
+    """Single search result
+    
+    Note: For type hints, use types.SearchResult instead.
+    """
     conversation_id: str
     message_id: str
     score: float
@@ -111,8 +91,10 @@ class QueryResult(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Query response"""
-
+    """Query response
+    
+    Note: For type hints, use types.QueryResponse instead.
+    """
     results: List[QueryResult]
     total: int
     page: int
@@ -120,8 +102,10 @@ class QueryResponse(BaseModel):
 
 
 class LabelSuggestion(BaseModel):
-    """Auto-label suggestion"""
-
+    """Auto-label suggestion
+    
+    Note: For type hints, use types.LabelSuggestion instead.
+    """
     label: str
     confidence: float
     is_existing: bool
@@ -129,8 +113,10 @@ class LabelSuggestion(BaseModel):
 
 
 class PruningSuggestion(BaseModel):
-    """Intelligent pruning suggestion"""
-
+    """Intelligent pruning suggestion
+    
+    Note: For type hints, use types.PruningSuggestion instead.
+    """
     conversation_id: str
     conversation_label: str
     last_accessed: datetime
@@ -142,8 +128,10 @@ class PruningSuggestion(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Health check response"""
-
+    """Health check response
+    
+    Note: For type hints, use types.HealthStatus instead.
+    """
     status: str
     version: str
     uptime_seconds: int
@@ -151,15 +139,16 @@ class HealthResponse(BaseModel):
 
 class ImportanceScore(BaseModel):
     """Message importance score"""
-
     score: float = Field(..., ge=1.0, le=10.0)
     reasoning: Optional[str] = None
     model: str
 
 
 class SummaryResponse(BaseModel):
-    """Generated summary"""
-
+    """Generated summary
+    
+    Note: For type hints, use types.SummaryResponse instead.
+    """
     conversation_id: str
     level: str
     summary: str
