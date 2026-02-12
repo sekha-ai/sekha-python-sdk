@@ -8,10 +8,6 @@ especially useful for multi-modal content validation.
 import sys
 from typing import Any, List, TypeGuard
 
-# Python 3.10+ type guard support
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-
 from .types import (
     ContentPart,
     ConversationStatus,
@@ -42,9 +38,7 @@ def is_string_content(content: MessageContent) -> TypeGuard[str]:
     return isinstance(content, str)
 
 
-def is_multi_modal_content(
-    content: MessageContent,
-) -> TypeGuard[List[ContentPart]]:
+def is_multi_modal_content(content: MessageContent) -> TypeGuard[List[ContentPart]]:
     """
     Check if content is multi-modal (array of content parts)
 
@@ -67,9 +61,7 @@ def is_text_part(part: Any) -> TypeGuard[TextPart]:
     Returns:
         True if part is a TextPart
     """
-    return (
-        isinstance(part, dict) and part.get("type") == "text" and "text" in part
-    )
+    return isinstance(part, dict) and part.get("type") == "text" and "text" in part
 
 
 def is_image_part(part: Any) -> TypeGuard[ImagePart]:
@@ -133,9 +125,7 @@ def extract_image_urls(content: MessageContent) -> List[str]:
         return []
 
     if is_multi_modal_content(content):
-        return [
-            part["image_url"]["url"] for part in content if is_image_part(part)
-        ]
+        return [part["image_url"]["url"] for part in content if is_image_part(part)]
 
     return []
 
