@@ -6,29 +6,29 @@ Controller, MCP, and Bridge services.
 
 Recommended usage:
     from sekha import SekhaClient
-    
+
     sekha = SekhaClient(
         controller_url='http://localhost:8080',
         bridge_url='http://localhost:5001',
         api_key='your-api-key'
     )
-    
+
     # Access individual clients
     await sekha.controller.query('search term')
     await sekha.mcp.memory_stats({})
     await sekha.bridge.complete(...)
-    
+
     # Or use convenience methods
     response = await sekha.complete_with_memory('prompt', 'context')
 """
 
 # Unified client (recommended)
 from .unified import (
-    SekhaClient,
-    create_sekha_client,
-    SekhaConfig,
-    MCPClient,
     BridgeClient,
+    MCPClient,
+    SekhaClient,
+    SekhaConfig,
+    create_sekha_client,
 )
 
 # Individual clients (for advanced usage)
@@ -39,10 +39,10 @@ from .client import (
 
 # Errors
 from .errors import (
-    SekhaError,
     SekhaAPIError,
     SekhaAuthError,
     SekhaConnectionError,
+    SekhaError,
     SekhaNotFoundError,
     SekhaValidationError,
 )
@@ -50,51 +50,45 @@ from .errors import (
 # Types
 from .types import (
     # Core Models
-    Message,
-    MessageContent,
     ContentPart,
     Conversation,
     ConversationStatus,
+    Message,
+    MessageContent,
     MessageRole,
     # Configuration
     MemoryConfig,
     # Request Types
-    CreateConversationRequest,
-    QueryRequest,
     ContextAssembleRequest,
+    CreateConversationRequest,
     PruneRequest,
+    QueryRequest,
     # Response Types
-    QueryResponse,
-    SearchResult,
+    LabelSuggestion,
     PruneResponse,
     PruningSuggestion,
-    LabelSuggestion,
+    QueryResponse,
+    SearchResult,
     SummaryResponse,
     # Enums
-    SummaryLevel,
     PruneRecommendation,
+    SummaryLevel,
 )
 
-# Type Guards & Validators
+# Type Guards
 from .type_guards import (
-    # Core Type Guards (8)
-    is_multi_modal_content,
-    is_text_part,
-    is_image_part,
-    extract_text,
     extract_image_urls,
+    extract_text,
     has_images,
-    is_valid_status,
-    is_valid_recommendation,
-    # Additional Validators
+    has_text,
+    is_image_part,
+    is_multi_modal_content,
+    is_string_content,
+    is_text_part,
+    is_valid_conversation_status,
+    is_valid_prune_recommendation,
     is_valid_role,
-    validate_message,
-    validate_conversation,
-    validate_api_response,
-    validate_request_payload,
-    is_valid_uuid,
-    is_valid_iso_datetime,
-    is_valid_url,
+    is_valid_summary_level,
 )
 
 __version__ = "0.6.0"
@@ -104,13 +98,11 @@ __all__ = [
     "SekhaClient",
     "create_sekha_client",
     "SekhaConfig",
-    
     # Individual Clients
     "MemoryController",
     "SyncSekhaClient",
     "MCPClient",
     "BridgeClient",
-    
     # Errors
     "SekhaError",
     "SekhaAPIError",
@@ -118,7 +110,6 @@ __all__ = [
     "SekhaConnectionError",
     "SekhaNotFoundError",
     "SekhaValidationError",
-    
     # Types - Core
     "Message",
     "MessageContent",
@@ -126,16 +117,13 @@ __all__ = [
     "Conversation",
     "ConversationStatus",
     "MessageRole",
-    
     # Types - Config
     "MemoryConfig",
-    
     # Types - Requests
     "CreateConversationRequest",
     "QueryRequest",
     "ContextAssembleRequest",
     "PruneRequest",
-    
     # Types - Responses
     "QueryResponse",
     "SearchResult",
@@ -143,30 +131,22 @@ __all__ = [
     "PruningSuggestion",
     "LabelSuggestion",
     "SummaryResponse",
-    
     # Enums
     "SummaryLevel",
     "PruneRecommendation",
-    
-    # Type Guards (8 Core)
+    # Type Guards
+    "is_string_content",
     "is_multi_modal_content",
     "is_text_part",
     "is_image_part",
     "extract_text",
     "extract_image_urls",
     "has_images",
-    "is_valid_status",
-    "is_valid_recommendation",
-    
-    # Validators
+    "has_text",
     "is_valid_role",
-    "validate_message",
-    "validate_conversation",
-    "validate_api_response",
-    "validate_request_payload",
-    "is_valid_uuid",
-    "is_valid_iso_datetime",
-    "is_valid_url",
+    "is_valid_conversation_status",
+    "is_valid_prune_recommendation",
+    "is_valid_summary_level",
 ]
 
 # Convenience: Make SekhaClient the default export equivalent
