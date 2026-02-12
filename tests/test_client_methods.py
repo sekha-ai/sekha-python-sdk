@@ -2,12 +2,13 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from sekha import SekhaClient, QueryResponse
+from sekha import MemoryController
+from sekha.types import QueryResponse
 
 
 @pytest.fixture
 def mock_client(test_config):
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
 
     # Mock the httpx client
     mock_httpx = AsyncMock()
@@ -37,7 +38,7 @@ def mock_client(test_config):
 @pytest.mark.asyncio
 async def test_async_context_manager_cleanup(test_config):
     """Test proper resource cleanup in async context manager"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
     async with client:
         assert client.client is not None
 
@@ -51,7 +52,7 @@ async def test_async_context_manager_cleanup(test_config):
 @pytest.mark.asyncio
 async def test_get_conversation(mock_client):
     result = await mock_client.get_conversation("conv-123")
-    assert result.id == "conv-123"
+    assert result["id"] == "conv-123"
     assert mock_client.client.get.called
 
 
@@ -82,8 +83,7 @@ async def test_list_conversations(mock_client):
     mock_client.client.get = AsyncMock(return_value=mock_response)
 
     result = await mock_client.list_conversations(label="Work", page=1, page_size=10)
-    assert isinstance(result, QueryResponse)
-    assert result.total == 1
+    assert result["total"] == 1
     assert mock_client.client.get.called
 
 

@@ -1,4 +1,4 @@
-"""Edge case and error handling tests for SekhaClient
+"""Edge case and error handling tests for MemoryController
 Covers missing coverage gaps
 """
 
@@ -7,7 +7,7 @@ from unittest.mock import Mock, AsyncMock
 import httpx
 
 from sekha import (
-    SekhaClient,
+    MemoryController,
     MessageRole,
     SekhaAPIError,
     SekhaConnectionError,
@@ -19,7 +19,7 @@ from sekha.types import CreateConversationRequest, Message
 @pytest.fixture
 def mock_client(test_config):
     """Client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
     client.client = AsyncMock()
     return client
 
@@ -205,8 +205,13 @@ class TestRateLimiterBackoffCoverage:
     @pytest.mark.asyncio
     async def test_rate_limiter_edge_case(self, test_config):
         """Test rate limiter with very small window"""
-        test_config["rate_limit_window"] = 0.001
-        client = SekhaClient(test_config)
+        from sekha.models import ClientConfig
+        config = ClientConfig(
+            api_key=test_config.api_key,
+            base_url=test_config.base_url,
+            rate_limit_window=0.001
+        )
+        client = MemoryController(config)
 
         await client.rate_limiter.acquire()
         await client.rate_limiter.acquire()
