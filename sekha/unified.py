@@ -13,8 +13,6 @@ from .types import (
     Message,
     MessageContent,
     MemoryConfig,
-    QueryResponse,
-    Conversation,
 )
 
 # Note: MCP and Bridge clients will be implemented separately

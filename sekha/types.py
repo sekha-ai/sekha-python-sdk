@@ -1,467 +1,457 @@
 """
-Complete Type Definitions for Sekha Python SDK
+Sekha Type Definitions
 
-All types match controller (Rust) and JS SDK exactly.
-Organized by domain: Core, API, MCP, Bridge, Utilities
-
-Note: Uses TypedDict for dict-based types and dataclasses for objects
+Comprehensive type system matching JS SDK types.ts
+Provides TypedDicts, dataclasses, and enums for complete type coverage.
 """
 
 from typing import (
-    TypedDict,
-    Union,
-    List,
-    Dict,
     Any,
+    Dict,
+    List,
+    TypedDict,
+    NotRequired,
+    Union,
     Optional,
     Literal,
-    Protocol,
 )
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 
+
 # ============================================
-# CORE MODELS
+# Enums
 # ============================================
+
 
 class MessageRole(str, Enum):
     """Message role in conversation"""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
-    TOOL = "tool"
 
 
 class ConversationStatus(str, Enum):
     """Conversation status"""
+
     ACTIVE = "active"
     ARCHIVED = "archived"
     PINNED = "pinned"
 
 
 class PruneRecommendation(str, Enum):
-    """Pruning recommendation type"""
-    ARCHIVE = "archive"
+    """Pruning recommendation level"""
+
     KEEP = "keep"
     REVIEW = "review"
+    ARCHIVE = "archive"
 
 
 class SummaryLevel(str, Enum):
     """Summary aggregation level"""
+
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
 
 
-class ImageUrl(TypedDict, total=False):
-    """Image URL with optional detail level for vision models"""
-    url: str  # Required
-    detail: Optional[str]  # 'low' | 'high' | 'auto'
+# ============================================
+# Core Message Types
+# ============================================
+
+
+class ImageUrl(TypedDict):
+    """Image URL with optional detail level"""
+
+    url: str
+    detail: NotRequired[Literal["auto", "low", "high"]]
 
 
 class TextPart(TypedDict):
     """Text content part"""
+
     type: Literal["text"]
     text: str
 
 
 class ImagePart(TypedDict):
     """Image content part"""
+
     type: Literal["image_url"]
     image_url: ImageUrl
 
 
-# Content part for multi-modal messages (text + images)
+# Union of content parts
 ContentPart = Union[TextPart, ImagePart]
 
-# Message content - either simple text or multi-modal parts
+# Message content can be simple string or array of parts
 MessageContent = Union[str, List[ContentPart]]
 
 
-class Message(TypedDict, total=False):
-    """Message in a conversation
-    
-    Supports both simple text and multi-modal content (text + images)
-    """
-    role: str  # Required: 'user' | 'assistant' | 'system'
-    content: MessageContent  # Required
-    timestamp: Optional[str]
-    metadata: Optional[Dict[str, Any]]
+class Message(TypedDict):
+    """Message in a conversation"""
+
+    role: MessageRole
+    content: MessageContent
+    timestamp: NotRequired[str]
+    metadata: NotRequired[Dict[str, Any]]
 
 
-class Conversation(TypedDict, total=False):
-    """Conversation type matching controller ConversationResponse
-    
-    All fields match src/api/dto.rs exactly
-    """
-    id: str  # Required
-    label: str  # Required
-    folder: str  # Required
-    status: str  # Required
-    message_count: int  # Required, snake_case from controller
-    created_at: str  # Required, ISO 8601 datetime
-    updated_at: Optional[str]
-    importance_score: Optional[float]  # Optional, 1-10
-    word_count: Optional[int]
-    session_count: Optional[int]
+class Conversation(TypedDict):
+    """Conversation with messages"""
 
-
-# ============================================
-# CONFIGURATION
-# ============================================
-
-@dataclass
-class MemoryConfig:
-    """Memory controller configuration"""
-    api_key: str
-    base_url: str = "http://localhost:8080"
-    default_label: Optional[str] = None
-    timeout: float = 30.0
-    max_retries: int = 3
-    rate_limit_requests: int = 1000  # per minute
-    rate_limit_window: float = 60.0
-
-
-# ============================================
-# REQUEST TYPES
-# ============================================
-
-class CreateConversationRequest(TypedDict, total=False):
-    """Create conversation request"""
-    messages: List[Message]  # Required
-    label: str  # Required
-    folder: Optional[str]
-    importance_score: Optional[float]
-    metadata: Optional[Dict[str, Any]]
-
-
-class UpdateLabelRequest(TypedDict):
-    """Update label request"""
+    id: str
+    messages: List[Message]
     label: str
-    folder: str  # Required - preserves folder structure
+    folder: str
+    importance_score: NotRequired[float]
+    created_at: str
+    updated_at: str
+    archived: NotRequired[bool]
+    metadata: NotRequired[Dict[str, Any]]
 
 
-class UpdateFolderRequest(TypedDict):
-    """Update folder request"""
+# ============================================
+# Configuration Types
+# ============================================
+
+
+class MemoryConfig(TypedDict):
+    """Memory controller configuration"""
+
+    base_url: str
+    api_key: str
+    default_label: NotRequired[str]
+    timeout: NotRequired[float]
+    max_retries: NotRequired[int]
+    rate_limit_requests: NotRequired[int]
+    rate_limit_window: NotRequired[float]
+
+
+# ============================================
+# Request Types
+# ============================================
+
+
+class CreateConversationRequest(TypedDict):
+    """Request to create a conversation"""
+
+    messages: List[Message]
+    label: str
+    folder: NotRequired[str]
+    importance_score: NotRequired[float]
+    metadata: NotRequired[Dict[str, Any]]
+
+
+class QueryRequest(TypedDict):
+    """Semantic query request"""
+
+    query: str
+    limit: NotRequired[int]
+    offset: NotRequired[int]
+    filters: NotRequired[Dict[str, Any]]
+
+
+class ContextAssembleRequest(TypedDict):
+    """Request to assemble context for LLM"""
+
+    query: str
+    context_budget: NotRequired[int]
+    preferred_labels: NotRequired[List[str]]
+    excluded_folders: NotRequired[List[str]]
+
+
+class PruneRequest(TypedDict):
+    """Request to prune conversations"""
+
+    threshold_days: NotRequired[int]
+    dry_run: NotRequired[bool]
+
+
+class LabelUpdateRequest(TypedDict):
+    """Request to update conversation label"""
+
+    conversation_id: str
+    label: str
+    folder: NotRequired[str]
+
+
+class FolderUpdateRequest(TypedDict):
+    """Request to update conversation folder"""
+
+    conversation_id: str
     folder: str
 
 
-class QueryRequest(TypedDict, total=False):
-    """Query request"""
-    query: str  # Required
-    filters: Optional[Any]
-    limit: Optional[int]
-    offset: Optional[int]
+class ExportRequest(TypedDict):
+    """Request to export conversations"""
 
-
-class FtsSearchRequest(TypedDict, total=False):
-    """Full-text search request"""
-    query: str  # Required
-    limit: Optional[int]
-
-
-class ContextAssembleRequest(TypedDict, total=False):
-    """Context assemble request"""
-    query: str  # Required
-    preferred_labels: Optional[List[str]]
-    context_budget: Optional[int]  # Token budget
-    excluded_folders: Optional[List[str]]
+    label: NotRequired[str]
+    folder: NotRequired[str]
+    format: NotRequired[Literal["markdown", "json"]]
 
 
 class SummarizeRequest(TypedDict):
-    """Summarize request"""
+    """Request to generate summary"""
+
     conversation_id: str
-    level: str  # 'daily' | 'weekly' | 'monthly'
+    level: NotRequired[SummaryLevel]
 
 
-class PruneRequest(TypedDict, total=False):
-    """Prune dry-run request"""
-    threshold_days: int  # Required
-    importance_threshold: Optional[float]
+class MessageScoreRequest(TypedDict):
+    """Request to score message importance"""
+
+    message_id: str
 
 
-class ExecutePruneRequest(TypedDict):
-    """Execute prune request"""
-    conversation_ids: List[str]
+class AutoLabelRequest(TypedDict):
+    """Request for auto-labeling"""
 
-
-class LabelSuggestRequest(TypedDict):
-    """Label suggest request"""
     conversation_id: str
+    threshold: NotRequired[float]
 
 
-class ListFilter(TypedDict, total=False):
-    """List/filter options for conversations"""
-    label: Optional[str]
-    folder: Optional[str]
-    pinned: Optional[bool]
-    archived: Optional[bool]
-    page: Optional[int]
-    page_size: Optional[int]
-    limit: Optional[int]  # Alias for page_size
-    offset: Optional[int]  # Alternative pagination
+class RebuildEmbeddingsRequest(TypedDict):
+    """Request to rebuild all embeddings"""
+
+    force: NotRequired[bool]
 
 
-class ExportOptions(TypedDict, total=False):
-    """Export options"""
-    label: Optional[str]
-    format: Optional[str]  # 'markdown' | 'json'
-    conversation_id: Optional[str]  # For single conversation export
-    include_metadata: Optional[bool]
+class FtsSearchRequest(TypedDict):
+    """Full-text search request"""
+
+    query: str
+    limit: NotRequired[int]
 
 
 # ============================================
-# RESPONSE TYPES
+# Response Types
 # ============================================
+
 
 class SearchResult(TypedDict):
-    """Search result matching controller SearchResultDto"""
+    """Single search result"""
+
     conversation_id: str
-    message_id: str
-    score: float
-    content: str
-    metadata: Dict[str, Any]
     label: str
     folder: str
-    timestamp: str  # ISO 8601
+    content: str
+    score: float
+    created_at: str
+    metadata: NotRequired[Dict[str, Any]]
+
+
+class PaginationInfo(TypedDict):
+    """Pagination metadata"""
+
+    page: int
+    page_size: int
+    total_pages: int
+    total_results: int
+    has_next: bool
+    has_prev: bool
 
 
 class QueryResponse(TypedDict):
-    """Query response with pagination"""
+    """Query response with results"""
+
     results: List[SearchResult]
     total: int
-    page: int
-    page_size: int
+    query: str
+    pagination: NotRequired[PaginationInfo]
 
 
-class FtsMessage(TypedDict):
-    """FTS message result"""
-    id: str
+class PruningSuggestion(TypedDict):
+    """Suggestion for conversation pruning"""
+
     conversation_id: str
-    role: str
+    label: str
+    last_accessed: str
+    days_since_access: int
+    recommendation: PruneRecommendation
+    reason: str
+
+
+class PruneResponse(TypedDict):
+    """Response from pruning operation"""
+
+    suggestions: List[PruningSuggestion]
+    total_reviewed: int
+    recommended_archive: int
+    recommended_keep: int
+
+
+class LabelSuggestion(TypedDict):
+    """AI-generated label suggestion"""
+
+    label: str
+    folder: str
+    confidence: float
+    reasoning: str
+
+
+class LabelSuggestResponse(TypedDict):
+    """Response with label suggestions"""
+
+    conversation_id: str
+    suggestions: List[LabelSuggestion]
+    top_suggestion: LabelSuggestion
+
+
+class SummaryResponse(TypedDict):
+    """Response with generated summary"""
+
+    conversation_id: str
+    summary: str
+    level: SummaryLevel
+    token_count: int
+    created_at: str
+
+
+class HealthStatus(TypedDict):
+    """Health check status"""
+
+    status: Literal["healthy", "unhealthy", "degraded"]
+    version: NotRequired[str]
+    uptime: NotRequired[int]
+    error: NotRequired[str]
+
+
+class CountResponse(TypedDict):
+    """Response with count"""
+
+    count: int
+    filters: NotRequired[Dict[str, Any]]
+
+
+class ExportResponse(TypedDict):
+    """Response with exported content"""
+
     content: str
-    timestamp: str
-    rank: float  # FTS rank/score
+    format: Literal["markdown", "json"]
+    conversation_count: int
+
+
+class MessageScoreResponse(TypedDict):
+    """Response with message importance score"""
+
+    message_id: str
+    importance_score: float
+    factors: Dict[str, float]
+    reasoning: str
+
+
+class RebuildEmbeddingsResponse(TypedDict):
+    """Response from embedding rebuild"""
+
+    status: Literal["started", "completed", "failed"]
+    conversations_processed: NotRequired[int]
+    errors: NotRequired[List[str]]
 
 
 class FtsSearchResponse(TypedDict):
     """Full-text search response"""
-    results: List[FtsMessage]
+
+    results: List[SearchResult]
     total: int
+    query: str
 
 
-class ContextAssembly(TypedDict, total=False):
-    """Context assembly result"""
-    messages: List[Message]  # Required: Assembled messages for LLM context
-    estimated_tokens: Optional[int]
-    conversations_used: Optional[int]
+class ContextAssembly(TypedDict):
+    """Assembled context for LLM"""
 
-
-class PruningSuggestion(TypedDict):
-    """Pruning suggestion from controller"""
-    conversation_id: str
-    conversation_label: str
-    last_accessed: str  # ISO 8601
-    message_count: int
-    token_estimate: int
-    importance_score: float
-    preview: str
-    recommendation: str  # PruneRecommendation
-
-
-class PruneResponse(TypedDict, total=False):
-    """Prune dry-run response"""
-    suggestions: List[PruningSuggestion]  # Required
-    total: int  # Required
-    estimated_token_savings: Optional[int]
-
-
-class LabelSuggestion(TypedDict):
-    """Label suggestion from AI"""
-    label: str
-    confidence: float  # 0-1
-    is_existing: bool  # Whether label already exists
-    reason: str  # AI explanation
-
-
-class LabelSuggestResponse(TypedDict):
-    """Label suggest response"""
-    conversation_id: str
-    suggestions: List[LabelSuggestion]
-
-
-class SummaryResponse(TypedDict):
-    """Summary response"""
-    conversation_id: str
-    level: str
-    summary: str
-    generated_at: str  # ISO 8601
-
-
-class HealthStatus(TypedDict):
-    """Health status response"""
-    status: str
-    version: str
-    uptime_seconds: int
-
-
-class ErrorResponse(TypedDict):
-    """Error response"""
-    error: str
-    code: int
-
-
-class RebuildEmbeddingsResponse(TypedDict):
-    """Rebuild embeddings response"""
-    success: bool
-    message: str
-    estimated_completion_seconds: int
-
-
-class Metrics(TypedDict):
-    """Metrics response (placeholder - controller returns 'not_implemented')"""
-    metrics: str
-    # Flexible for future metrics
-
-
-class CountResponse(TypedDict, total=False):
-    """Count response"""
-    count: int  # Required
-    label: Optional[str]
-    folder: Optional[str]
+    messages: List[Message]
+    token_count: int
+    conversation_ids: List[str]
+    labels: List[str]
 
 
 # ============================================
-# MCP (Model Context Protocol) TYPES
+# MCP Types
 # ============================================
 
-class McpToolResponse(TypedDict, total=False):
-    """Standard MCP tool response wrapper"""
-    success: bool  # Required
-    data: Optional[Any]
-    error: Optional[str]
+
+class McpToolResponse(TypedDict):
+    """Response from MCP tool"""
+
+    content: List[Dict[str, Any]]
+    isError: NotRequired[bool]
+
+
+class MemoryQueryRequest(TypedDict):
+    """MCP memory query request"""
+
+    query: str
+    limit: NotRequired[int]
+    filters: NotRequired[Dict[str, Any]]
 
 
 class MemoryStoreRequest(TypedDict):
     """MCP memory store request"""
-    label: str
-    folder: str
+
     messages: List[Message]
+    label: str
+    folder: NotRequired[str]
 
 
-class MemoryQueryRequest(TypedDict, total=False):
-    """MCP memory query request"""
-    query: str  # Required
-    filters: Optional[Any]
-    limit: Optional[int]
+class MemoryStatsRequest(TypedDict):
+    """MCP memory stats request"""
 
-
-class MemoryQueryResponse(TypedDict, total=False):
-    """MCP memory query response"""
-    success: bool  # Required
-    data: QueryResponse  # Required
-    error: Optional[str]
+    include_details: NotRequired[bool]
 
 
 # ============================================
-# UTILITY TYPES
+# Utility Types
 # ============================================
 
-class PaginationParams(TypedDict, total=False):
+
+class PaginationParams(TypedDict):
     """Pagination parameters"""
-    page: Optional[int]
-    page_size: Optional[int]
-    limit: Optional[int]
-    offset: Optional[int]
+
+    page: NotRequired[int]
+    page_size: NotRequired[int]
 
 
-class FilterParams(TypedDict, total=False):
-    """Filter parameters for searches"""
-    labels: Optional[List[str]]
-    folder: Optional[str]
-    status: Optional[str]  # ConversationStatus
-    importance_min: Optional[float]
-    importance_max: Optional[float]
-    date_from: Optional[str]
-    date_to: Optional[str]
+class FilterParams(TypedDict):
+    """Common filter parameters"""
+
+    label: NotRequired[str]
+    folder: NotRequired[str]
+    archived: NotRequired[bool]
+    pinned: NotRequired[bool]
 
 
 class SortParams(TypedDict):
     """Sort parameters"""
-    field: str  # 'created_at' | 'updated_at' | 'importance_score' | 'message_count'
-    order: str  # 'asc' | 'desc'
+
+    field: str
+    order: NotRequired[Literal["asc", "desc"]]
 
 
-class BulkOperationResult(TypedDict, total=False):
-    """Bulk operation result"""
-    success: int  # Required
-    failed: int  # Required
-    errors: Optional[List[Dict[str, str]]]  # [{"id": "...", "error": "..."}]
+class DateRangeFilter(TypedDict):
+    """Date range filter"""
+
+    start: NotRequired[str]
+    end: NotRequired[str]
 
 
-# ============================================
-# TYPE GUARDS & HELPERS
-# ============================================
+class MetadataFilter(TypedDict):
+    """Metadata filter"""
 
-def is_multi_modal_content(content: MessageContent) -> bool:
-    """Check if content is multi-modal (has images)"""
-    return isinstance(content, list)
-
-
-def is_text_part(part: ContentPart) -> bool:
-    """Check if content part is text"""
-    return isinstance(part, dict) and part.get("type") == "text"
+    key: str
+    value: Any
+    operator: NotRequired[Literal["eq", "ne", "gt", "lt", "contains"]]
 
 
-def is_image_part(part: ContentPart) -> bool:
-    """Check if content part is image"""
-    return isinstance(part, dict) and part.get("type") == "image_url"
+@dataclass
+class ClientConfig:
+    """Configuration for Sekha client"""
 
-
-def extract_text(content: MessageContent) -> str:
-    """Extract text from message content"""
-    if isinstance(content, str):
-        return content
-    
-    text_parts = [part["text"] for part in content if is_text_part(part)]
-    return " ".join(text_parts)
-
-
-def extract_image_urls(content: MessageContent) -> List[str]:
-    """Extract image URLs from message content"""
-    if isinstance(content, str):
-        return []
-    
-    return [
-        part["image_url"]["url"]
-        for part in content
-        if is_image_part(part)
-    ]
-
-
-def has_images(message: Message) -> bool:
-    """Check if message has images"""
-    return len(extract_image_urls(message["content"])) > 0
-
-
-def is_valid_status(status: str) -> bool:
-    """Validate conversation status"""
-    return status in ["active", "archived", "pinned"]
-
-
-def is_valid_recommendation(rec: str) -> bool:
-    """Validate prune recommendation"""
-    return rec in ["archive", "keep", "review"]
-
-
-# ============================================
-# BACKWARDS COMPATIBILITY ALIASES
-# ============================================
-
-# Deprecated aliases for migration
-ConversationDto = Conversation
-SearchResultDto = SearchResult
-PruningSuggestionDto = PruningSuggestion
-LabelSuggestionDto = LabelSuggestion
-ClientConfig = MemoryConfig  # Keep for backwards compat
+    api_key: str
+    base_url: str = "http://localhost:8080"
+    default_label: str = "Conversation"
+    timeout: float = 30.0
+    max_retries: int = 3
+    rate_limit_requests: int = 1000
+    rate_limit_window: float = 60.0

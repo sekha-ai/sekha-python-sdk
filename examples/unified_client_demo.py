@@ -181,9 +181,7 @@ async def type_safe_usage():
     print("\n=== Type-Safe Usage ===")
     
     from sekha.types import (
-        Conversation,
         SearchResult,
-        MessageContent,
         is_multi_modal_content,
         extract_text,
     )
@@ -259,7 +257,7 @@ async def error_handling():
     ) as sekha:
         try:
             # Try to get non-existent conversation
-            conversation = await sekha.controller.get_conversation(
+            await sekha.controller.get_conversation(
                 "non-existent-id"
             )
         except SekhaNotFoundError as e:

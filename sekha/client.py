@@ -22,18 +22,11 @@ from .models import (
     QueryResponse as QueryResponseModel,
 )
 from .types import (
-    # Type aliases
-    Conversation,
-    QueryResponse as QueryResponseType,
-    SearchResult,
     PruneResponse,
     LabelSuggestResponse,
     SummaryResponse,
-    HealthStatus,
-    CountResponse,
     FtsSearchResponse,
     ContextAssembly,
-    RebuildEmbeddingsResponse,
 )
 from .utils import RateLimiter, validate_api_key, validate_base_url
 
