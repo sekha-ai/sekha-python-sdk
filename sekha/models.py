@@ -9,32 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field
 # For type hints, use types from types.py which are the canonical source.
 # These models will eventually be deprecated in favor of pure TypedDicts.
 
-from .types import (
-    MemoryConfig as MemoryConfigType,
-    MessageRole,
-    ConversationStatus,
-    PruneRecommendation,
-)
+from .types import MemoryConfig as MemoryConfigType
+from .types import MessageRole
 
 # Re-export for backward compatibility
 ClientConfig = MemoryConfigType
-
-# Re-export enums for backward compatibility
-__all__ = [
-    "MessageRole",
-    "ConversationStatus",
-    "ClientConfig",
-    "MessageDto",
-    "NewConversation",
-    "ConversationResponse",
-    "SearchResult",
-    "QueryRequest",
-    "QueryResponse",
-    "QueryResult",
-    "ImportanceScore",
-    "LabelSuggestion",
-    "PruningSuggestion",
-]
 
 
 class MessageDto(BaseModel):
@@ -102,26 +81,11 @@ class SearchResult(BaseModel):
     )
 
 
-class QueryResult(BaseModel):
-    """Individual query result (alias for SearchResult for backward compat)"""
-
-    conversation_id: str = Field(..., description="Conversation UUID")
-    message_id: str = Field(..., description="Message UUID")
-    score: float = Field(..., description="Relevance score")
-    content: str = Field(..., description="Result content")
-    label: str = Field(..., description="Conversation label")
-    folder: str = Field(..., description="Folder path")
-    timestamp: datetime = Field(..., description="Message timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Result metadata"
-    )
-
-
 class QueryRequest(BaseModel):
     """Semantic query request"""
 
     query: str = Field(..., description="Search query")
-    limit: int = Field(default=10, ge=1, le=100, description="Max results")
+    limit: Optional[int] = Field(None, ge=1, le=100, description="Max results")
     offset: Optional[int] = Field(None, ge=0, description="Pagination offset")
     filters: Optional[Dict[str, Any]] = Field(
         None, description="Metadata filters"
@@ -134,48 +98,3 @@ class QueryResponse(BaseModel):
     results: List[SearchResult] = Field(..., description="Search results")
     total: int = Field(..., description="Total matching results")
     query: str = Field(..., description="Original query")
-
-
-class ImportanceScore(BaseModel):
-    """AI-generated importance score for content"""
-
-    score: float = Field(..., ge=1.0, le=10.0, description="Importance score (1-10)")
-    reasoning: str = Field(..., description="Explanation for the score")
-    model: str = Field(..., description="Model used for scoring")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Additional metadata"
-    )
-
-
-class LabelSuggestion(BaseModel):
-    """AI-generated label suggestion"""
-
-    label: str = Field(..., description="Suggested label")
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence score (0-1)"
-    )
-    is_existing: bool = Field(
-        default=False, description="Whether label already exists"
-    )
-    reason: str = Field(..., description="Reasoning for suggestion")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Additional metadata"
-    )
-
-
-class PruningSuggestion(BaseModel):
-    """Suggestion for conversation pruning"""
-
-    conversation_id: str = Field(..., description="Conversation UUID")
-    conversation_label: str = Field(..., description="Conversation label")
-    last_accessed: datetime = Field(..., description="Last access timestamp")
-    message_count: int = Field(..., description="Number of messages")
-    token_estimate: int = Field(..., description="Estimated token count")
-    importance_score: float = Field(
-        ..., ge=1.0, le=10.0, description="Importance score"
-    )
-    preview: str = Field(..., description="Preview of conversation")
-    recommendation: str = Field(..., description="Pruning recommendation")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Additional metadata"
-    )
