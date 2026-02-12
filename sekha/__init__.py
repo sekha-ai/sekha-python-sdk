@@ -73,11 +73,28 @@ from .types import (
     # Enums
     SummaryLevel,
     PruneRecommendation,
-    # Type Guards
+)
+
+# Type Guards & Validators
+from .type_guards import (
+    # Core Type Guards (8)
     is_multi_modal_content,
+    is_text_part,
+    is_image_part,
     extract_text,
     extract_image_urls,
     has_images,
+    is_valid_status,
+    is_valid_recommendation,
+    # Additional Validators
+    is_valid_role,
+    validate_message,
+    validate_conversation,
+    validate_api_response,
+    validate_request_payload,
+    is_valid_uuid,
+    is_valid_iso_datetime,
+    is_valid_url,
 )
 
 __version__ = "0.6.0"
@@ -131,11 +148,25 @@ __all__ = [
     "SummaryLevel",
     "PruneRecommendation",
     
-    # Type Guards
+    # Type Guards (8 Core)
     "is_multi_modal_content",
+    "is_text_part",
+    "is_image_part",
     "extract_text",
     "extract_image_urls",
     "has_images",
+    "is_valid_status",
+    "is_valid_recommendation",
+    
+    # Validators
+    "is_valid_role",
+    "validate_message",
+    "validate_conversation",
+    "validate_api_response",
+    "validate_request_payload",
+    "is_valid_uuid",
+    "is_valid_iso_datetime",
+    "is_valid_url",
 ]
 
 # Convenience: Make SekhaClient the default export equivalent
