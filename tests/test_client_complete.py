@@ -1,4 +1,4 @@
-"""Complete integration tests for SekhaClient
+"""Complete integration tests for MemoryController
 Tests all major API endpoints with realistic scenarios
 """
 
@@ -8,7 +8,7 @@ from datetime import datetime
 import httpx
 
 from sekha import (
-    SekhaClient,
+    MemoryController,
     MessageRole,
     SekhaAPIError,
     SekhaAuthError,
@@ -18,6 +18,7 @@ from sekha import (
     SekhaError,
 )
 from sekha.types import CreateConversationRequest, Message
+from sekha.models import ClientConfig
 
 # ==================== Fixtures ====================
 
@@ -25,13 +26,13 @@ from sekha.types import CreateConversationRequest, Message
 @pytest.fixture
 def memory(test_config):
     """Create client instance (no mocking yet)"""
-    return SekhaClient(test_config)
+    return MemoryController(test_config)
 
 
 @pytest.fixture
 def mock_client(test_config):
     """Create a client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
 
     # Create a mock that tracks calls but allows method assignment
     mock_httpx_client = AsyncMock()
@@ -74,28 +75,24 @@ class TestMemoryControllerInit:
 
     def test_init_with_config(self, test_config):
         """Test initialization with full config"""
-        client = SekhaClient(test_config)
-        assert client.config["api_key"] == test_config["api_key"]
-        assert client.config["base_url"] == test_config["base_url"]
+        client = MemoryController(test_config)
+        assert client.config.api_key == test_config.api_key
+        assert client.config.base_url == test_config.base_url
 
     def test_init_validates_api_key_length(self):
         """Test that short API keys raise error"""
-        from sekha.types import MemoryConfig
-
         with pytest.raises(ValueError, match="too short"):
-            config: MemoryConfig = {"api_key": "sk-sekha-short"}
-            SekhaClient(config)
+            config = ClientConfig(api_key="sk-sekha-short", base_url="http://localhost:8080")
+            MemoryController(config)
 
     def test_init_validates_base_url_format(self):
         """Test that invalid URLs raise error"""
-        from sekha.types import MemoryConfig
-
         with pytest.raises(ValueError, match="Invalid base_url"):
-            config: MemoryConfig = {
-                "api_key": "sk-sekha-" + "x" * 32,
-                "base_url": "not-a-url",
-            }
-            SekhaClient(config)
+            config = ClientConfig(
+                api_key="sk-sekha-" + "x" * 32,
+                base_url="not-a-url",
+            )
+            MemoryController(config)
 
 
 # ==================== Conversation Creation Tests ====================
@@ -135,7 +132,7 @@ class TestCreateConversation:
     @pytest.mark.asyncio
     async def test_create_conversation_auth_error(self, test_config):
         """Test 401 error handling"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
 
         error_response = Mock()
         error_response.status_code = 401
@@ -451,14 +448,14 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_async_context_manager(self, test_config):
         """Test async context manager usage"""
-        async with SekhaClient(test_config) as client:
-            assert isinstance(client, SekhaClient)
+        async with MemoryController(test_config) as client:
+            assert isinstance(client, MemoryController)
             assert client.client is not None
 
     @pytest.mark.asyncio
     async def test_async_cleanup(self, test_config):
         """Test proper cleanup of async resources"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         await client.close()
 
 
@@ -471,7 +468,7 @@ class TestRateLimiting:
     @pytest.mark.asyncio
     async def test_rate_limiter_acquires(self, test_config):
         """Test rate limiter is called"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
 
         assert client.rate_limiter.max_requests == 1000
         assert client.rate_limiter.window_seconds == 60.0
