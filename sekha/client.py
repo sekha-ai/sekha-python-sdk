@@ -18,8 +18,22 @@ from .models import (
     ClientConfig,
     ConversationResponse,
     NewConversation,
-    QueryRequest,
-    QueryResponse,
+    QueryRequest as QueryRequestModel,
+    QueryResponse as QueryResponseModel,
+)
+from .types import (
+    # Type aliases
+    Conversation,
+    QueryResponse as QueryResponseType,
+    SearchResult,
+    PruneResponse,
+    LabelSuggestResponse,
+    SummaryResponse,
+    HealthStatus,
+    CountResponse,
+    FtsSearchResponse,
+    ContextAssembly,
+    RebuildEmbeddingsResponse,
 )
 from .utils import RateLimiter, validate_api_key, validate_base_url
 
@@ -32,7 +46,7 @@ class SekhaClient:
     Automatically handles auth, retries, and rate limiting.
     """
 
-    def __init__(self, config: ClientConfig):
+    def __init__(self, config: ClientConfig) -> None:
         """
         Initialize the client
 
@@ -53,22 +67,22 @@ class SekhaClient:
             timeout=config.timeout,
             headers={
                 "Authorization": f"Bearer {config.api_key}",
-                "User-Agent": "Sekha-Python-SDK/0.5.0",
+                "User-Agent": "Sekha-Python-SDK/0.6.0",
             },
         )
 
         # For sync operations, we'll create clients on-demand
         self._sync_client: Optional[httpx.Client] = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "SekhaClient":
         """Async context manager entry"""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit"""
         await self.close()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the async client"""
         if hasattr(self, "client") and self.client:
             await self.client.aclose()
@@ -82,7 +96,7 @@ class SekhaClient:
                 timeout=self.config.timeout,
                 headers={
                     "Authorization": f"Bearer {self.config.api_key}",
-                    "User-Agent": "Sekha-Python-SDK/0.5.0",
+                    "User-Agent": "Sekha-Python-SDK/0.6.0",
                 },
             )
         return self._sync_client
@@ -136,7 +150,15 @@ class SekhaClient:
             raise SekhaError(f"Unexpected error: {e}")
 
     async def get_conversation(self, conversation_id: str) -> ConversationResponse:
-        """Get conversation by ID"""
+        """
+        Get conversation by ID
+        
+        Args:
+            conversation_id: Conversation UUID
+            
+        Returns:
+            Conversation details
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -159,8 +181,21 @@ class SekhaClient:
         archived: Optional[bool] = None,
         page: int = 1,
         page_size: int = 50,
-    ) -> QueryResponse:
-        """List conversations with optional filtering"""
+    ) -> QueryResponseModel:
+        """
+        List conversations with optional filtering
+        
+        Args:
+            label: Filter by label
+            folder: Filter by folder
+            pinned: Filter by pinned status
+            archived: Filter by archived status
+            page: Page number
+            page_size: Results per page
+            
+        Returns:
+            Query response with conversations
+        """
         await self.rate_limiter.acquire()
 
         params: Dict[str, Any] = {"page": page, "page_size": page_size}
@@ -179,7 +214,7 @@ class SekhaClient:
                 params=params,
             )
             response.raise_for_status()
-            return QueryResponse(**response.json())
+            return QueryResponseModel(**response.json())
 
         except Exception as e:
             raise SekhaError(f"Failed to list conversations: {e}")
@@ -190,7 +225,14 @@ class SekhaClient:
         new_label: str,
         new_folder: str,
     ) -> None:
-        """Update conversation label and folder"""
+        """
+        Update conversation label and folder
+        
+        Args:
+            conversation_id: Conversation UUID
+            new_label: New label name
+            new_folder: New folder path
+        """
         await self.rate_limiter.acquire()
 
         body = {"label": new_label, "folder": new_folder}
@@ -214,7 +256,13 @@ class SekhaClient:
         conversation_id: str,
         new_folder: str,
     ) -> None:
-        """Update conversation folder"""
+        """
+        Update conversation folder
+        
+        Args:
+            conversation_id: Conversation UUID
+            new_folder: New folder path
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -232,7 +280,12 @@ class SekhaClient:
             )
 
     async def pin_conversation(self, conversation_id: str) -> None:
-        """Pin a conversation (sets importance=10)"""
+        """
+        Pin a conversation (sets importance=10)
+        
+        Args:
+            conversation_id: Conversation UUID
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -249,7 +302,12 @@ class SekhaClient:
             )
 
     async def archive_conversation(self, conversation_id: str) -> None:
-        """Archive a conversation"""
+        """
+        Archive a conversation
+        
+        Args:
+            conversation_id: Conversation UUID
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -268,7 +326,12 @@ class SekhaClient:
             )
 
     async def delete_conversation(self, conversation_id: str) -> None:
-        """Delete a conversation"""
+        """
+        Delete a conversation
+        
+        Args:
+            conversation_id: Conversation UUID
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -287,7 +350,16 @@ class SekhaClient:
     async def count_conversations(
         self, label: Optional[str] = None, folder: Optional[str] = None
     ) -> int:
-        """Count conversations with optional filtering"""
+        """
+        Count conversations with optional filtering
+        
+        Args:
+            label: Filter by label
+            folder: Filter by folder
+            
+        Returns:
+            Number of matching conversations
+        """
         await self.rate_limiter.acquire()
 
         params: Dict[str, str] = {}
@@ -314,7 +386,7 @@ class SekhaClient:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         filters: Optional[Dict[str, Any]] = None,
-    ) -> QueryResponse:
+    ) -> QueryResponseModel:
         """
         Semantic query using vector similarity search
 
@@ -329,7 +401,7 @@ class SekhaClient:
         """
         await self.rate_limiter.acquire()
 
-        body = QueryRequest(query=query, limit=limit, offset=offset, filters=filters)
+        body = QueryRequestModel(query=query, limit=limit, offset=offset, filters=filters)
 
         try:
             response = await self.client.post(
@@ -337,7 +409,7 @@ class SekhaClient:
                 json=body.model_dump(),
             )
             response.raise_for_status()
-            return QueryResponse(**response.json())
+            return QueryResponseModel(**response.json())
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 400:
@@ -357,12 +429,32 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Query failed: {e}")
 
-    async def smart_query(self, query: str, **kwargs) -> QueryResponse:
-        """Alias for query() - semantic query with smart ranking"""
+    async def smart_query(self, query: str, **kwargs) -> QueryResponseModel:
+        """
+        Alias for query() - semantic query with smart ranking
+        
+        Args:
+            query: Search query
+            **kwargs: Additional query options
+            
+        Returns:
+            Query response with results
+        """
         return await self.query(query, **kwargs)
 
-    async def full_text_search(self, query: str, limit: int = 10) -> Dict[str, Any]:
-        """Full-text search using SQLite FTS5"""
+    async def full_text_search(
+        self, query: str, limit: int = 10
+    ) -> FtsSearchResponse:
+        """
+        Full-text search using SQLite FTS5
+        
+        Args:
+            query: Search text
+            limit: Max results
+            
+        Returns:
+            Full-text search results
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -371,13 +463,15 @@ class SekhaClient:
                 json={"query": query, "limit": limit},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
 
         except Exception as e:
             raise SekhaError(f"Full-text search failed: {e}")
 
     async def rebuild_embeddings(self) -> None:
-        """Trigger rebuild of all embeddings"""
+        """
+        Trigger rebuild of all embeddings
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -395,8 +489,19 @@ class SekhaClient:
         preferred_labels: Optional[List[str]] = None,
         context_budget: int = 4000,
         excluded_folders: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
-        """Assemble intelligent context for a query"""
+    ) -> ContextAssembly:
+        """
+        Assemble intelligent context for a query
+        
+        Args:
+            query: Query to build context for
+            preferred_labels: Labels to prioritize
+            context_budget: Token budget for context
+            excluded_folders: Folders to exclude
+            
+        Returns:
+            Context assembly with messages
+        """
         await self.rate_limiter.acquire()
 
         body = {
@@ -412,14 +517,14 @@ class SekhaClient:
                 json=body,
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
 
         except Exception as e:
             raise SekhaError(f"Failed to assemble context: {e}")
 
     async def summarize(
         self, conversation_id: str, level: str = "daily"
-    ) -> Dict[str, Any]:
+    ) -> SummaryResponse:
         """
         Generate hierarchical summary
 
@@ -438,17 +543,36 @@ class SekhaClient:
                 json={"conversation_id": conversation_id, "level": level},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
 
         except Exception as e:
             raise SekhaError(f"Failed to generate summary: {e}")
 
-    async def generate_summary(self, conversation_id: str, **kwargs) -> Dict[str, Any]:
-        """Alias for summarize() - generate summary for conversation"""
+    async def generate_summary(
+        self, conversation_id: str, **kwargs
+    ) -> SummaryResponse:
+        """
+        Alias for summarize() - generate summary for conversation
+        
+        Args:
+            conversation_id: Conversation UUID
+            **kwargs: Additional summarize options
+            
+        Returns:
+            Summary response
+        """
         return await self.summarize(conversation_id, **kwargs)
 
-    async def prune_dry_run(self, threshold_days: int = 90) -> Dict[str, Any]:
-        """Get pruning suggestions without executing"""
+    async def prune_dry_run(self, threshold_days: int = 90) -> PruneResponse:
+        """
+        Get pruning suggestions without executing
+        
+        Args:
+            threshold_days: Days since last access threshold
+            
+        Returns:
+            Pruning suggestions
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -457,17 +581,30 @@ class SekhaClient:
                 json={"threshold_days": threshold_days},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
 
         except Exception as e:
             raise SekhaError(f"Failed to get pruning suggestions: {e}")
 
-    async def get_pruning_suggestions(self, **kwargs) -> Dict[str, Any]:
-        """Alias for prune_dry_run() - get pruning suggestions"""
+    async def get_pruning_suggestions(self, **kwargs) -> PruneResponse:
+        """
+        Alias for prune_dry_run() - get pruning suggestions
+        
+        Args:
+            **kwargs: Prune options
+            
+        Returns:
+            Pruning suggestions
+        """
         return await self.prune_dry_run(**kwargs)
 
     async def prune_execute(self, conversation_ids: List[str]) -> None:
-        """Execute pruning (archive conversations)"""
+        """
+        Execute pruning (archive conversations)
+        
+        Args:
+            conversation_ids: List of conversation UUIDs to archive
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -480,8 +617,16 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Failed to execute pruning: {e}")
 
-    async def suggest_labels(self, conversation_id: str) -> Dict[str, Any]:
-        """Get AI-powered label suggestions"""
+    async def suggest_labels(self, conversation_id: str) -> LabelSuggestResponse:
+        """
+        Get AI-powered label suggestions
+        
+        Args:
+            conversation_id: Conversation UUID
+            
+        Returns:
+            Label suggestions with confidence scores
+        """
         await self.rate_limiter.acquire()
 
         try:
@@ -490,7 +635,7 @@ class SekhaClient:
                 json={"conversation_id": conversation_id},
             )
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore
 
         except Exception as e:
             raise SekhaError(f"Failed to suggest labels: {e}")
@@ -609,14 +754,14 @@ class SyncSekhaClient:
     All async methods are available as sync methods.
     """
 
-    def __init__(self, config: ClientConfig):
+    def __init__(self, config: ClientConfig) -> None:
         self._config = config
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "SyncSekhaClient":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._loop and not self._loop.is_closed():
             self._loop.close()
 
