@@ -10,10 +10,23 @@ from pydantic import BaseModel, ConfigDict, Field
 # These models will eventually be deprecated in favor of pure TypedDicts.
 
 from .types import MemoryConfig as MemoryConfigType
-from .types import MessageRole
+from .types import MessageRole, ConversationStatus
 
 # Re-export for backward compatibility
 ClientConfig = MemoryConfigType
+
+# Re-export enums for backward compatibility
+__all__ = [
+    "MessageRole",
+    "ConversationStatus",
+    "ClientConfig",
+    "MessageDto",
+    "NewConversation",
+    "ConversationResponse",
+    "SearchResult",
+    "QueryRequest",
+    "QueryResponse",
+]
 
 
 class MessageDto(BaseModel):
