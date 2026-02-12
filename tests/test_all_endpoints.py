@@ -11,6 +11,7 @@ import uuid
 import os
 from unittest.mock import Mock, AsyncMock
 from sekha import SekhaClient, MessageRole
+from sekha.models import ClientConfig
 from datetime import datetime
 
 # Check if we should use real integration or mocks
@@ -22,14 +23,12 @@ def client(test_config):
     """Create test client - uses real controller if SEKHA_INTEGRATION_TESTS=1"""
     if USE_REAL_CONTROLLER:
         # Use real controller from environment
-        from sekha.types import MemoryConfig
-
-        config: MemoryConfig = {
-            "base_url": os.getenv("SEKHA_BASE_URL", "http://localhost:8080"),
-            "api_key": os.getenv(
+        config = ClientConfig(
+            base_url=os.getenv("SEKHA_BASE_URL", "http://localhost:8080"),
+            api_key=os.getenv(
                 "SEKHA_API_KEY", "sk-sekha-test-token-123456789012345678901234567890"
             ),
-        }
+        )
         return SekhaClient(config)
     else:
         # Use mocked client for local development
@@ -76,18 +75,19 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_create_conversation(self, client):
         """POST /api/v1/conversations"""
-        from sekha.types import CreateConversationRequest
+        from sekha.models import NewConversation, MessageDto
+        from sekha.types import MessageRole
         
-        conversation: CreateConversationRequest = {
-            "label": "test-label",
-            "folder": "test-folder",
-            "messages": [
-                {"role": "user", "content": "Hello"},
-                {"role": "assistant", "content": "Hi there!"},
+        conversation = NewConversation(
+            label="test-label",
+            folder="test-folder",
+            messages=[
+                MessageDto(role=MessageRole.USER, content="Hello"),
+                MessageDto(role=MessageRole.ASSISTANT, content="Hi there!"),
             ],
-        }
+        )
         response = await client.create_conversation(conversation)
-        assert response["id"]
+        assert response.id
         if not USE_REAL_CONTROLLER:
             assert client.client.post.called
 
@@ -96,6 +96,7 @@ class TestConversationEndpoints:
         """GET /api/v1/conversations/{id}"""
         if not USE_REAL_CONTROLLER:
             # Mock the response
+            from sekha.models import ConversationResponse
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
             mock_response.json = Mock(
@@ -113,7 +114,7 @@ class TestConversationEndpoints:
 
         try:
             response = await client.get_conversation(test_conversation_id)
-            assert response["id"] == test_conversation_id
+            assert response.id == test_conversation_id
         except Exception as e:
             # Real controller might not have this ID
             if USE_REAL_CONTROLLER:
@@ -136,8 +137,8 @@ class TestConversationEndpoints:
             client.client.get = AsyncMock(return_value=mock_response)
 
         response = await client.list_conversations(page=1, page_size=10)
-        assert "results" in response
-        assert "total" in response
+        assert response.total is not None
+        assert response.results is not None
 
     @pytest.mark.asyncio
     async def test_update_label(self, client, test_conversation_id):
@@ -225,8 +226,8 @@ class TestSearchQueryEndpoints:
             limit=10,
             offset=0,
         )
-        assert "results" in response
-        assert "total" in response
+        assert response.total is not None
+        assert response.results is not None
 
     @pytest.mark.asyncio
     async def test_full_text_search(self, client):
@@ -384,7 +385,7 @@ class TestHealthMetrics:
             client.client.get = AsyncMock(return_value=mock_response)
 
         # Use the client's httpx client directly
-        response = await client.client.get(f"{client.config['base_url']}/health")
+        response = await client.client.get(f"{client.config.base_url}/health")
         response.raise_for_status()
         data = response.json()
         assert "status" in data
@@ -397,7 +398,7 @@ class TestHealthMetrics:
             mock_response.raise_for_status = Mock()
             client.client.get = AsyncMock(return_value=mock_response)
 
-        response = await client.client.get(f"{client.config['base_url']}/metrics")
+        response = await client.client.get(f"{client.config.base_url}/metrics")
         response.raise_for_status()
         if not USE_REAL_CONTROLLER:
             assert client.client.get.called
