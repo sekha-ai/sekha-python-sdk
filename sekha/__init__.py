@@ -1,10 +1,43 @@
 """
 Sekha Python SDK - AI-Powered Memory System
 
-Provides both async and sync clients for interacting with Sekha Memory Controller.
+Provides unified client interface plus individual clients for
+Controller, MCP, and Bridge services.
+
+Recommended usage:
+    from sekha import SekhaClient
+    
+    sekha = SekhaClient(
+        controller_url='http://localhost:8080',
+        bridge_url='http://localhost:5001',
+        api_key='your-api-key'
+    )
+    
+    # Access individual clients
+    await sekha.controller.query('search term')
+    await sekha.mcp.memory_stats({})
+    await sekha.bridge.complete(...)
+    
+    # Or use convenience methods
+    response = await sekha.complete_with_memory('prompt', 'context')
 """
 
-from .client import SekhaClient, SyncSekhaClient, MemoryController
+# Unified client (recommended)
+from .unified import (
+    SekhaClient,
+    create_sekha_client,
+    SekhaConfig,
+    MCPClient,
+    BridgeClient,
+)
+
+# Individual clients (for advanced usage)
+from .client import (
+    SekhaClient as MemoryController,  # Alias
+    SyncSekhaClient,
+)
+
+# Errors
 from .errors import (
     SekhaError,
     SekhaAPIError,
@@ -13,6 +46,8 @@ from .errors import (
     SekhaNotFoundError,
     SekhaValidationError,
 )
+
+# Types
 from .types import (
     # Core Models
     Message,
@@ -48,10 +83,17 @@ from .types import (
 __version__ = "0.6.0"
 
 __all__ = [
-    # Clients
+    # Unified Client (Recommended)
     "SekhaClient",
-    "SyncSekhaClient",
+    "create_sekha_client",
+    "SekhaConfig",
+    
+    # Individual Clients
     "MemoryController",
+    "SyncSekhaClient",
+    "MCPClient",
+    "BridgeClient",
+    
     # Errors
     "SekhaError",
     "SekhaAPIError",
@@ -59,6 +101,7 @@ __all__ = [
     "SekhaConnectionError",
     "SekhaNotFoundError",
     "SekhaValidationError",
+    
     # Types - Core
     "Message",
     "MessageContent",
@@ -66,13 +109,16 @@ __all__ = [
     "Conversation",
     "ConversationStatus",
     "MessageRole",
+    
     # Types - Config
     "MemoryConfig",
+    
     # Types - Requests
     "CreateConversationRequest",
     "QueryRequest",
     "ContextAssembleRequest",
     "PruneRequest",
+    
     # Types - Responses
     "QueryResponse",
     "SearchResult",
@@ -80,12 +126,17 @@ __all__ = [
     "PruningSuggestion",
     "LabelSuggestion",
     "SummaryResponse",
+    
     # Enums
     "SummaryLevel",
     "PruneRecommendation",
+    
     # Type Guards
     "is_multi_modal_content",
     "extract_text",
     "extract_image_urls",
     "has_images",
 ]
+
+# Convenience: Make SekhaClient the default export equivalent
+default = SekhaClient
