@@ -1,5 +1,5 @@
 import pytest
-from sekha.models import ClientConfig
+from sekha.types import ClientConfig  # Import the dataclass, not the TypedDict alias
 
 
 @pytest.fixture
