@@ -4,6 +4,7 @@ import pytest
 import httpx
 import asyncio
 from unittest.mock import Mock, AsyncMock
+from datetime import datetime
 
 from sekha import SekhaClient
 from sekha.errors import (
@@ -207,8 +208,7 @@ class TestFilterConditions:
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "label:important",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -226,8 +226,7 @@ class TestFilterConditions:
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "pinned:true",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -245,8 +244,7 @@ class TestFilterConditions:
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "archived:false",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -287,13 +285,13 @@ class TestNoneToEmptyList:
         client = SekhaClient(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value=[])
+        mock_response.json = Mock(return_value={"messages": [], "token_count": 0, "conversation_ids": [], "labels": []})
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.assemble_context(
             "test", preferred_labels=None, excluded_folders=None
         )
-        assert result == []
+        assert result["messages"] == []
 
 
 class TestKwargsAndAliases:
@@ -305,7 +303,13 @@ class TestKwargsAndAliases:
         client = SekhaClient(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"summary": "test", "level": "weekly"})
+        mock_response.json = Mock(return_value={
+            "conversation_id": "123",
+            "summary": "test",
+            "level": "weekly",
+            "token_count": 100,
+            "created_at": datetime.now().isoformat()
+        })
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.summarize("123", level="weekly")
@@ -317,7 +321,13 @@ class TestKwargsAndAliases:
         client = SekhaClient(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"summary": "test"})
+        mock_response.json = Mock(return_value={
+            "conversation_id": "123",
+            "summary": "test",
+            "level": "daily",
+            "token_count": 50,
+            "created_at": datetime.now().isoformat()
+        })
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.generate_summary("123")
@@ -336,7 +346,8 @@ class TestAutoLabelPaths:
         mock_response.json = Mock(
             return_value={
                 "conversation_id": "123",
-                "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/"}],
+                "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"}],
+                "top_suggestion": {"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"},
             }
         )
         client.client.post = AsyncMock(return_value=mock_response)
@@ -354,8 +365,9 @@ class TestAutoLabelPaths:
             return_value={
                 "conversation_id": "123",
                 "suggestions": [
-                    {"label": "important", "confidence": 0.95, "folder": "/work"}
+                    {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"}
                 ],
+                "top_suggestion": {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"},
             }
         )
 
@@ -388,7 +400,7 @@ class TestExportFilters:
         client = SekhaClient(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export"})
+        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(label="important")
@@ -400,7 +412,7 @@ class TestExportFilters:
         client = SekhaClient(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export"})
+        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(folder="/work")
