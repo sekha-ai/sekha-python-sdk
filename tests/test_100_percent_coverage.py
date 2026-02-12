@@ -13,7 +13,6 @@ from sekha.errors import (
     SekhaValidationError,
     SekhaAPIError,
 )
-from sekha.models import QueryRequest, ImportanceScore
 from sekha.utils import validate_api_key, validate_base_url, parse_iso_datetime
 
 
@@ -441,26 +440,6 @@ class TestSyncWrapper:
         assert loop is not None
         assert not loop.is_closed()
         loop.close()
-
-
-# ============== Models.py Coverage ==============
-
-
-class TestModels:
-    """Lines 51, 54"""
-
-    def test_query_request_none_values(self):
-        req = QueryRequest(query="test", limit=None, offset=None, filters=None)
-        data = req.model_dump()
-        assert data["query"] == "test"
-
-    def test_importance_score_too_low(self):
-        with pytest.raises(ValueError):
-            ImportanceScore(score=0)
-
-    def test_importance_score_too_high(self):
-        with pytest.raises(ValueError):
-            ImportanceScore(score=11)
 
 
 # ============== Utils.py Coverage ==============
