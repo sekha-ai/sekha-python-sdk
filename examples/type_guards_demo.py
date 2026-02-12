@@ -4,16 +4,9 @@ Type Guards Demo
 Demonstrates runtime type checking and validation using type guards.
 """
 
-from typing import List
-
-from sekha import (
-    SekhaClient,
-    MemoryConfig,
-)
 from sekha.types import (
     Message,
     MessageContent,
-    ContentPart,
 )
 from sekha.type_guards import (
     is_string_content,
@@ -115,7 +108,7 @@ def demo_message_checking():
         "content": "Simple text question"
     }
     
-    print(f"\nText message:")
+    print("\nText message:")
     print(f"  Has text: {has_text(text_msg)}")
     print(f"  Has images: {has_images(text_msg)}")
     
@@ -128,7 +121,7 @@ def demo_message_checking():
         ]
     }
     
-    print(f"\nMulti-modal message:")
+    print("\nMulti-modal message:")
     print(f"  Has text: {has_text(mm_msg)}")
     print(f"  Has images: {has_images(mm_msg)}")
     print(f"  Text: {extract_text(mm_msg['content'])}")

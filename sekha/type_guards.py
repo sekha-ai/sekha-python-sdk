@@ -5,7 +5,7 @@ Provides type guard functions to validate types at runtime,
 especially useful for multi-modal content validation.
 """
 
-from typing import Any, Dict, List, TypeGuard
+from typing import Any, List, TypeGuard
 import sys
 
 # Python 3.10+ type guard support
@@ -17,7 +17,6 @@ from .types import (
     ContentPart,
     TextPart,
     ImagePart,
-    Conversation,
     ConversationStatus,
     PruneRecommendation,
     SummaryLevel,

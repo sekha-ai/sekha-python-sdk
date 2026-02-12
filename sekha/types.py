@@ -12,7 +12,6 @@ from typing import (
     TypedDict,
     NotRequired,
     Union,
-    Optional,
     Literal,
 )
 from dataclasses import dataclass
