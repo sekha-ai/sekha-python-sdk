@@ -2,7 +2,7 @@
 
 import asyncio
 import httpx
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 import backoff
 
 # Explicit imports instead of wildcard
@@ -22,6 +22,8 @@ from .models import (
     QueryResponse as QueryResponseModel,
 )
 from .types import (
+    CreateConversationRequest,
+    QueryRequest,
     PruneResponse,
     LabelSuggestResponse,
     SummaryResponse,
@@ -101,13 +103,13 @@ class SekhaClient:
     )
     async def create_conversation(
         self,
-        conversation: NewConversation,
-    ) -> ConversationResponse:
+        conversation: Union[CreateConversationRequest, NewConversation],
+    ) -> Dict[str, Any]:
         """
         Create a new conversation with messages
 
         Args:
-            conversation: NewConversation object
+            conversation: Conversation data (TypedDict or Pydantic model)
 
         Returns:
             Created conversation with ID
@@ -119,12 +121,18 @@ class SekhaClient:
         await self.rate_limiter.acquire()
 
         try:
+            # Handle both Pydantic models and TypedDicts
+            if hasattr(conversation, 'model_dump'):
+                json_data = conversation.model_dump()
+            else:
+                json_data = dict(conversation)  # TypedDict to dict
+                
             response = await self.client.post(
                 "/api/v1/conversations",
-                json=conversation.model_dump(),
+                json=json_data,
             )
             response.raise_for_status()
-            return ConversationResponse(**response.json())
+            return response.json()
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 400:
@@ -142,7 +150,7 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Unexpected error: {e}")
 
-    async def get_conversation(self, conversation_id: str) -> ConversationResponse:
+    async def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         """
         Get conversation by ID
         
@@ -157,7 +165,7 @@ class SekhaClient:
         try:
             response = await self.client.get(f"/api/v1/conversations/{conversation_id}")
             response.raise_for_status()
-            return ConversationResponse(**response.json())
+            return response.json()
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -174,7 +182,7 @@ class SekhaClient:
         archived: Optional[bool] = None,
         page: int = 1,
         page_size: int = 50,
-    ) -> QueryResponseModel:
+    ) -> Dict[str, Any]:
         """
         List conversations with optional filtering
         
@@ -207,7 +215,7 @@ class SekhaClient:
                 params=params,
             )
             response.raise_for_status()
-            return QueryResponseModel(**response.json())
+            return response.json()
 
         except Exception as e:
             raise SekhaError(f"Failed to list conversations: {e}")
@@ -379,7 +387,7 @@ class SekhaClient:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         filters: Optional[Dict[str, Any]] = None,
-    ) -> QueryResponseModel:
+    ) -> Dict[str, Any]:
         """
         Semantic query using vector similarity search
 
@@ -394,15 +402,21 @@ class SekhaClient:
         """
         await self.rate_limiter.acquire()
 
-        body = QueryRequestModel(query=query, limit=limit, offset=offset, filters=filters)
+        body = {"query": query}
+        if limit is not None:
+            body["limit"] = limit
+        if offset is not None:
+            body["offset"] = offset
+        if filters is not None:
+            body["filters"] = filters
 
         try:
             response = await self.client.post(
                 "/api/v1/query",
-                json=body.model_dump(),
+                json=body,
             )
             response.raise_for_status()
-            return QueryResponseModel(**response.json())
+            return response.json()
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 400:
@@ -422,7 +436,7 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Query failed: {e}")
 
-    async def smart_query(self, query: str, **kwargs) -> QueryResponseModel:
+    async def smart_query(self, query: str, **kwargs) -> Dict[str, Any]:
         """
         Alias for query() - semantic query with smart ranking
         
@@ -610,7 +624,7 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Failed to execute pruning: {e}")
 
-    async def suggest_labels(self, conversation_id: str) -> LabelSuggestResponse:
+    async def suggest_labels(self, conversation_id: str) -> Dict[str, Any]:
         """
         Get AI-powered label suggestions
         
@@ -628,7 +642,7 @@ class SekhaClient:
                 json={"conversation_id": conversation_id},
             )
             response.raise_for_status()
-            return response.json()  # type: ignore
+            return response.json()
 
         except Exception as e:
             raise SekhaError(f"Failed to suggest labels: {e}")
