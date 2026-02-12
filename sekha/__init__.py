@@ -37,6 +37,16 @@ from .client import (
     SyncSekhaClient,
 )
 
+# Pydantic models (for backward compatibility with tests)
+from .models import (
+    ConversationResponse,
+    MessageDto,
+    NewConversation,
+    QueryRequest,
+    QueryResponse as QueryResponseModel,
+    SearchResult as SearchResultModel,
+)
+
 # Errors
 from .errors import (
     SekhaAPIError,
@@ -62,7 +72,7 @@ from .types import (
     ContextAssembleRequest,
     CreateConversationRequest,
     PruneRequest,
-    QueryRequest,
+    QueryRequest as QueryRequestType,
     # Response Types
     LabelSuggestion,
     PruneResponse,
@@ -103,6 +113,13 @@ __all__ = [
     "SyncSekhaClient",
     "MCPClient",
     "BridgeClient",
+    # Pydantic Models (backward compatibility)
+    "MessageDto",
+    "NewConversation",
+    "ConversationResponse",
+    "QueryRequest",
+    "QueryResponseModel",
+    "SearchResultModel",
     # Errors
     "SekhaError",
     "SekhaAPIError",
@@ -121,7 +138,7 @@ __all__ = [
     "MemoryConfig",
     # Types - Requests
     "CreateConversationRequest",
-    "QueryRequest",
+    "QueryRequestType",
     "ContextAssembleRequest",
     "PruneRequest",
     # Types - Responses
