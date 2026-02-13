@@ -1,22 +1,17 @@
-"""Tests for SekhaClient"""
+"""Tests for MemoryController (sekha.client.SekhaClient)"""
 
 import pytest
 from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
-from sekha import (
-    SekhaClient,
-    NewConversation,
-    MessageDto,
-    ConversationResponse,
-    MessageRole,
-)
+from sekha import MemoryController, MessageRole
+from sekha.types import CreateConversationRequest, Message, Conversation
 
 
 @pytest.fixture
 def mock_client(test_config):
     """Create a client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
 
     # Create a mock that tracks calls but allows method assignment
     mock_httpx_client = AsyncMock()
@@ -30,8 +25,9 @@ def mock_client(test_config):
             "label": "Test",
             "folder": "/",
             "status": "active",
-            "message_count": 1,
+            "messages": [],
             "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
         }
     )
 
@@ -50,16 +46,17 @@ def mock_client(test_config):
 @pytest.mark.asyncio
 async def test_create_conversation(mock_client):
     """Test creating a conversation"""
-    conv = NewConversation(
-        label="Test",
-        folder="/",
-        messages=[MessageDto(role=MessageRole.USER, content="Hello")],
-    )
+    msg: Message = {"role": "user", "content": "Hello"}
+    
+    conv: CreateConversationRequest = {
+        "label": "Test",
+        "folder": "/",
+        "messages": [msg],
+    }
 
     result = await mock_client.create_conversation(conv)
 
-    assert isinstance(result, ConversationResponse)
-    assert result.label == "Test"
+    assert result["label"] == "Test"
     assert mock_client.client.post.called
 
 
@@ -74,18 +71,15 @@ async def test_smart_query(mock_client):
             "results": [
                 {
                     "conversation_id": "conv-123",
-                    "message_id": "msg-456",
                     "score": 0.8,
                     "content": "test",
-                    "metadata": {},
                     "label": "Test",
                     "folder": "/",
-                    "timestamp": datetime.now().isoformat(),
+                    "created_at": datetime.now().isoformat(),
                 }
             ],
             "total": 1,
-            "page": 1,
-            "page_size": 1,
+            "query": "test query",
         }
     )
 
@@ -93,9 +87,9 @@ async def test_smart_query(mock_client):
 
     result = await mock_client.smart_query("test query")
 
-    assert result.total == 1
-    assert len(result.results) == 1
-    assert result.results[0].content == "test"
+    assert result["total"] == 1
+    assert len(result["results"]) == 1
+    assert result["results"][0]["content"] == "test"
 
 
 @pytest.mark.asyncio

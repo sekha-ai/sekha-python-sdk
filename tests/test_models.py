@@ -1,137 +1,83 @@
-"""Tests for Pydantic models"""
+"""Tests for TypedDict models"""
 
 import pytest
 from datetime import datetime
-from sekha.models import (
+from sekha.types import (
     MessageRole,
     ConversationStatus,
-    MessageDto,
-    ConversationResponse,
+    Message,
+    SearchResult,
     QueryRequest,
-    QueryResult,
-    LabelSuggestion,
-    PruningSuggestion,
-    ImportanceScore,
+    QueryResponse,
 )
-from pydantic import ValidationError
 
 
-class TestMessageDto:
+class TestMessage:
     def test_valid_message(self):
-        msg = MessageDto(role=MessageRole.USER, content="Hello")
-        assert msg.role == MessageRole.USER
-        assert msg.content == "Hello"
+        msg: Message = {"role": "user", "content": "Hello"}
+        assert msg["role"] == "user"
+        assert msg["content"] == "Hello"
 
     def test_message_with_metadata(self):
-        msg = MessageDto(
-            role=MessageRole.ASSISTANT, content="Response", metadata={"confidence": 0.9}
-        )
-        assert msg.metadata["confidence"] == 0.9
+        msg: Message = {
+            "role": "assistant",
+            "content": "Response",
+            "metadata": {"confidence": 0.9},
+        }
+        assert msg["metadata"]["confidence"] == 0.9
 
-    def test_invalid_role_enum(self):
-        with pytest.raises(ValueError):
-            MessageDto(role="invalid_role", content="Test")
+    def test_message_role_enum(self):
+        assert MessageRole.USER == "user"
+        assert MessageRole.ASSISTANT == "assistant"
+        assert MessageRole.SYSTEM == "system"
 
 
-class TestConversationResponse:
-    def test_valid_response(self):
-        conv = ConversationResponse(
-            id="test-uuid-123",
-            label="Project:AI",
-            folder="/work",
-            status=ConversationStatus.ACTIVE,
-            message_count=5,
-            created_at=datetime.now(),
-        )
-        assert conv.id == "test-uuid-123"
-        assert conv.message_count == 5
-
-    def test_response_serialization(self):
-        from datetime import timezone
-
-        dt = datetime(2025, 12, 30, 10, 30, 0, tzinfo=timezone.utc)
-        conv = ConversationResponse(
-            id="conv-123",
-            label="Test",
-            folder="/",
-            status=ConversationStatus.PINNED,
-            message_count=1,
-            created_at=dt,
-        )
-        data = conv.model_dump()
-        assert data["id"] == "conv-123"
-        assert data["status"] == "pinned"
+class TestSearchResult:
+    def test_result_creation(self):
+        dt = datetime.now()
+        result: SearchResult = {
+            "conversation_id": "conv-456",
+            "score": 0.85,
+            "content": "Important message",
+            "label": "Project:AI",
+            "folder": "/work",
+            "created_at": dt,
+        }
+        assert result["score"] == 0.85
+        assert result["conversation_id"] == "conv-456"
 
 
 class TestQueryRequest:
     def test_basic_query(self):
-        req = QueryRequest(query="token limits")
-        assert req.query == "token limits"
-        assert req.limit == 10  # default
+        req: QueryRequest = {"query": "token limits"}
+        assert req["query"] == "token limits"
 
     def test_query_with_limit(self):
-        req = QueryRequest(query="auth patterns", limit=50)
-        assert req.limit == 50
+        req: QueryRequest = {"query": "auth patterns", "limit": 50}
+        assert req["limit"] == 50
 
     def test_query_with_filters(self):
-        req = QueryRequest(
-            query="test", filters={"label": "Project:AI", "folder": "/work"}
-        )
-        assert req.filters["label"] == "Project:AI"
+        req: QueryRequest = {
+            "query": "test",
+            "filters": {"label": "Project:AI", "folder": "/work"},
+        }
+        assert req["filters"]["label"] == "Project:AI"
 
 
-class TestQueryResult:
-    def test_result_creation(self):
-        dt = datetime.now()
-        result = QueryResult(
-            conversation_id="conv-456",
-            message_id="msg-789",
-            score=0.85,
-            content="Important message",
-            label="Project:AI",
-            folder="/work",
-            timestamp=dt,
-        )
-        assert result.score == 0.85
-        assert result.conversation_id == "conv-456"
+class TestQueryResponse:
+    def test_response_structure(self):
+        response: QueryResponse = {
+            "results": [],
+            "total": 0,
+            "query": "test",
+        }
+        assert response["total"] == 0
+        assert response["query"] == "test"
+        assert isinstance(response["results"], list)
 
 
-class TestImportanceScore:
-    def test_valid_score(self):
-        score = ImportanceScore(
-            score=8.5, reasoning="Critical information", model="gpt-4"
-        )
-        assert score.score == 8.5
-        assert 1.0 <= score.score <= 10.0
-
-    def test_score_out_of_range(self):
-        with pytest.raises(ValidationError):
-            ImportanceScore(score=11.0, reasoning="Too high", model="test")
-
-
-class TestLabelSuggestion:
-    def test_suggestion_with_confidence(self):
-        sugg = LabelSuggestion(
-            label="Project:AI",
-            confidence=0.92,
-            is_existing=True,
-            reason="Matches context",
-        )
-        assert sugg.confidence > 0.9
-        assert sugg.is_existing is True
-
-
-class TestPruningSuggestion:
-    def test_pruning_suggestion(self):
-        sugg = PruningSuggestion(
-            conversation_id="old-conv",
-            conversation_label="Old Project",
-            last_accessed=datetime.now(),
-            message_count=150,
-            token_estimate=4500,
-            importance_score=2.1,
-            preview="Old conversation...",
-            recommendation="archive",
-        )
-        assert sugg.recommendation == "archive"
-        assert sugg.importance_score < 3.0
+class TestConversationStatus:
+    def test_status_values(self):
+        assert ConversationStatus.ACTIVE == "active"
+        assert ConversationStatus.ARCHIVED == "archived"
+        assert ConversationStatus.PINNED == "pinned"

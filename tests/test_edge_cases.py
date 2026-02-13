@@ -1,4 +1,4 @@
-"""Edge case and error handling tests for SekhaClient
+"""Edge case and error handling tests for MemoryController
 Covers missing coverage gaps
 """
 
@@ -7,20 +7,19 @@ from unittest.mock import Mock, AsyncMock
 import httpx
 
 from sekha import (
-    SekhaClient,
-    NewConversation,
-    MessageDto,
+    MemoryController,
     MessageRole,
     SekhaAPIError,
     SekhaConnectionError,
     SekhaNotFoundError,
 )
+from sekha.types import CreateConversationRequest, Message, ClientConfig
 
 
 @pytest.fixture
 def mock_client(test_config):
     """Client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
     client.client = AsyncMock()
     return client
 
@@ -47,9 +46,10 @@ class TestErrorHandlingCoverage:
             )
         )
 
-        conv = NewConversation(
-            label="Test", messages=[MessageDto(role=MessageRole.USER, content="Test")]
-        )
+        conv: CreateConversationRequest = {
+            "label": "Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         with pytest.raises(SekhaAPIError, match="500"):
             await mock_client.create_conversation(conv)
@@ -61,9 +61,10 @@ class TestErrorHandlingCoverage:
             side_effect=httpx.TimeoutException("Timeout")
         )
 
-        conv = NewConversation(
-            label="Test", messages=[MessageDto(role=MessageRole.USER, content="Test")]
-        )
+        conv: CreateConversationRequest = {
+            "label": "Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         with pytest.raises(SekhaConnectionError, match="timed out"):
             await mock_client.create_conversation(conv)
@@ -147,7 +148,6 @@ class TestErrorHandlingCoverage:
         )
 
         with pytest.raises(SekhaNotFoundError):
-            # update_label now requires both label and folder
             await mock_client.update_label("conv-123", "NewLabel", "/work")
 
     @pytest.mark.asyncio
@@ -179,11 +179,9 @@ class TestSyncWrapperCoverage:
 
         sync_client = SyncSekhaClient(test_config)
 
-        # Test that it has the expected attributes
         assert hasattr(sync_client, "_config")
         assert sync_client._config == test_config
 
-        # Cleanup loop if created
         if sync_client._loop and not sync_client._loop.is_closed():
             sync_client._loop.close()
 
@@ -194,7 +192,6 @@ class TestSyncWrapperCoverage:
         with SyncSekhaClient(test_config) as sync_client:
             assert sync_client is not None
 
-        # After context exit, loop should be cleaned up
         if sync_client._loop:
             assert sync_client._loop.is_closed()
 
@@ -208,10 +205,13 @@ class TestRateLimiterBackoffCoverage:
     @pytest.mark.asyncio
     async def test_rate_limiter_edge_case(self, test_config):
         """Test rate limiter with very small window"""
-        test_config.rate_limit_window = 0.001
-        client = SekhaClient(test_config)
+        config = ClientConfig(
+            api_key=test_config.api_key,
+            base_url=test_config.base_url,
+            rate_limit_window=0.001
+        )
+        client = MemoryController(config)
 
-        # Should still work
         await client.rate_limiter.acquire()
         await client.rate_limiter.acquire()
 
@@ -221,11 +221,9 @@ class TestRateLimiterBackoffCoverage:
         """Test URL validation edge cases"""
         from sekha.utils import validate_base_url
 
-        # Valid URLs
         assert validate_base_url("http://localhost:8080")
         assert validate_base_url("https://api.sekha.ai/v1")
 
-        # Invalid URLs
         with pytest.raises(ValueError, match="Invalid base_url"):
             validate_base_url("not-a-url")
 
@@ -354,7 +352,7 @@ class TestLabelIntelligence:
         )
 
         mock_client.client.post = AsyncMock(return_value=mock_response)
-        mock_client.client.put = AsyncMock()  # Should not be called
+        mock_client.client.put = AsyncMock()
 
         result = await mock_client.auto_label("conv-123", threshold=0.8)
 

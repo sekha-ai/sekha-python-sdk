@@ -4,8 +4,9 @@ import pytest
 import httpx
 import asyncio
 from unittest.mock import Mock, AsyncMock
+from datetime import datetime
 
-from sekha import SekhaClient
+from sekha import MemoryController
 from sekha.errors import (
     SekhaNotFoundError,
     SekhaConnectionError,
@@ -13,7 +14,6 @@ from sekha.errors import (
     SekhaValidationError,
     SekhaAPIError,
 )
-from sekha.models import QueryRequest, ImportanceScore
 from sekha.utils import validate_api_key, validate_base_url, parse_iso_datetime
 
 
@@ -21,7 +21,7 @@ class TestSyncClientProperty:
     """Lines 79-88: sync_client property lazy loading"""
 
     def test_sync_client_lazy_creation(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         assert client._sync_client is None
         sync = client.sync_client
         assert sync is not None
@@ -36,7 +36,7 @@ class TestErrorHandling404:
 
     @pytest.mark.asyncio
     async def test_get_conversation_404(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -48,7 +48,7 @@ class TestErrorHandling404:
 
     @pytest.mark.asyncio
     async def test_update_label_404(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -61,7 +61,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_update_folder_404(self, test_config):
         """Line 230 - 404 path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -74,7 +74,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_update_folder_500(self, test_config):
         """Lines 227-230 - non-404 error path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Server error"
@@ -87,7 +87,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_pin_404(self, test_config):
         """Line 247 - 404 path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -100,7 +100,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_pin_500(self, test_config):
         """Lines 244-247 - non-404 error path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Server error"
@@ -113,7 +113,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_archive_404(self, test_config):
         """Line 264 - 404 path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -126,7 +126,7 @@ class TestErrorHandling404:
     @pytest.mark.asyncio
     async def test_archive_500(self, test_config):
         """Lines 261-264 - non-404 error path"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Server error"
@@ -138,7 +138,7 @@ class TestErrorHandling404:
 
     @pytest.mark.asyncio
     async def test_delete_404(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not found"
@@ -154,7 +154,7 @@ class TestQueryErrors:
 
     @pytest.mark.asyncio
     async def test_query_400(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.text = "Bad request"
@@ -166,7 +166,7 @@ class TestQueryErrors:
 
     @pytest.mark.asyncio
     async def test_query_401(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
@@ -178,7 +178,7 @@ class TestQueryErrors:
 
     @pytest.mark.asyncio
     async def test_query_timeout(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         client.client.post = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
 
         with pytest.raises(SekhaConnectionError, match="Query timed out"):
@@ -186,7 +186,7 @@ class TestQueryErrors:
 
     @pytest.mark.asyncio
     async def test_query_connect_error(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         client.client.post = AsyncMock(
             side_effect=httpx.ConnectError("Connection failed")
         )
@@ -201,15 +201,14 @@ class TestFilterConditions:
     @pytest.mark.asyncio
     async def test_list_with_label_filter(self, test_config):
         """Line 172 - label filter"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "label:important",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -220,15 +219,14 @@ class TestFilterConditions:
     @pytest.mark.asyncio
     async def test_list_with_pinned_filter(self, test_config):
         """Line 170"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "pinned:true",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -239,15 +237,14 @@ class TestFilterConditions:
     @pytest.mark.asyncio
     async def test_list_with_archived_filter(self, test_config):
         """Line 174"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(
             return_value={
                 "results": [],
                 "total": 0,
-                "page": 1,
-                "page_size": 50,
+                "query": "archived:false",
             }
         )
         client.client.get = AsyncMock(return_value=mock_response)
@@ -258,7 +255,7 @@ class TestFilterConditions:
     @pytest.mark.asyncio
     async def test_count_with_label(self, test_config):
         """Line 343 - count with label filter"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(return_value={"count": 5})
@@ -270,7 +267,7 @@ class TestFilterConditions:
     @pytest.mark.asyncio
     async def test_count_with_folder(self, test_config):
         """Line 348"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(return_value={"count": 3})
@@ -285,16 +282,16 @@ class TestNoneToEmptyList:
 
     @pytest.mark.asyncio
     async def test_assemble_context_none_params(self, test_config):
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value=[])
+        mock_response.json = Mock(return_value={"messages": [], "token_count": 0, "conversation_ids": [], "labels": []})
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.assemble_context(
             "test", preferred_labels=None, excluded_folders=None
         )
-        assert result == []
+        assert result["messages"] == []
 
 
 class TestKwargsAndAliases:
@@ -303,10 +300,16 @@ class TestKwargsAndAliases:
     @pytest.mark.asyncio
     async def test_summarize_with_level(self, test_config):
         """Line 387-388"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"summary": "test", "level": "weekly"})
+        mock_response.json = Mock(return_value={
+            "conversation_id": "123",
+            "summary": "test",
+            "level": "weekly",
+            "token_count": 100,
+            "created_at": datetime.now().isoformat()
+        })
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.summarize("123", level="weekly")
@@ -315,10 +318,16 @@ class TestKwargsAndAliases:
     @pytest.mark.asyncio
     async def test_generate_summary_alias(self, test_config):
         """Lines 417-418 - generate_summary alias"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"summary": "test"})
+        mock_response.json = Mock(return_value={
+            "conversation_id": "123",
+            "summary": "test",
+            "level": "daily",
+            "token_count": 50,
+            "created_at": datetime.now().isoformat()
+        })
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.generate_summary("123")
@@ -331,13 +340,14 @@ class TestAutoLabelPaths:
     @pytest.mark.asyncio
     async def test_auto_label_below_threshold(self, test_config):
         """Lines 462-463: Return None if no match"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(
             return_value={
                 "conversation_id": "123",
-                "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/"}],
+                "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"}],
+                "top_suggestion": {"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"},
             }
         )
         client.client.post = AsyncMock(return_value=mock_response)
@@ -348,15 +358,16 @@ class TestAutoLabelPaths:
     @pytest.mark.asyncio
     async def test_auto_label_above_threshold(self, test_config):
         """Lines 480-481: Apply label if above threshold"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         suggest_response = Mock()
         suggest_response.raise_for_status = Mock()
         suggest_response.json = Mock(
             return_value={
                 "conversation_id": "123",
                 "suggestions": [
-                    {"label": "important", "confidence": 0.95, "folder": "/work"}
+                    {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"}
                 ],
+                "top_suggestion": {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"},
             }
         )
 
@@ -373,7 +384,7 @@ class TestAutoLabelPaths:
     @pytest.mark.asyncio
     async def test_suggest_labels_error(self, test_config):
         """Lines 443-444 - error path in suggest_labels exception handling"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         client.client.post = AsyncMock(side_effect=Exception("API failed"))
 
         with pytest.raises(Exception, match="Failed to suggest labels"):
@@ -386,10 +397,10 @@ class TestExportFilters:
     @pytest.mark.asyncio
     async def test_export_with_label(self, test_config):
         """Line 621 - export with label filter"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export"})
+        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(label="important")
@@ -398,10 +409,10 @@ class TestExportFilters:
     @pytest.mark.asyncio
     async def test_export_with_folder(self, test_config):
         """Line 550"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export"})
+        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(folder="/work")
@@ -441,26 +452,6 @@ class TestSyncWrapper:
         assert loop is not None
         assert not loop.is_closed()
         loop.close()
-
-
-# ============== Models.py Coverage ==============
-
-
-class TestModels:
-    """Lines 51, 54"""
-
-    def test_query_request_none_values(self):
-        req = QueryRequest(query="test", limit=None, offset=None, filters=None)
-        data = req.model_dump()
-        assert data["query"] == "test"
-
-    def test_importance_score_too_low(self):
-        with pytest.raises(ValueError):
-            ImportanceScore(score=0)
-
-    def test_importance_score_too_high(self):
-        with pytest.raises(ValueError):
-            ImportanceScore(score=11)
 
 
 # ============== Utils.py Coverage ==============

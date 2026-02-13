@@ -1,4 +1,4 @@
-"""Complete integration tests for SekhaClient
+"""Complete integration tests for MemoryController
 Tests all major API endpoints with realistic scenarios
 """
 
@@ -8,9 +8,7 @@ from datetime import datetime
 import httpx
 
 from sekha import (
-    SekhaClient,
-    NewConversation,
-    MessageDto,
+    MemoryController,
     MessageRole,
     SekhaAPIError,
     SekhaAuthError,
@@ -19,6 +17,7 @@ from sekha import (
     SekhaValidationError,
     SekhaError,
 )
+from sekha.types import CreateConversationRequest, Message, ClientConfig
 
 # ==================== Fixtures ====================
 
@@ -26,13 +25,13 @@ from sekha import (
 @pytest.fixture
 def memory(test_config):
     """Create client instance (no mocking yet)"""
-    return SekhaClient(test_config)
+    return MemoryController(test_config)
 
 
 @pytest.fixture
 def mock_client(test_config):
     """Create a client with mocked httpx"""
-    client = SekhaClient(test_config)
+    client = MemoryController(test_config)
 
     # Create a mock that tracks calls but allows method assignment
     mock_httpx_client = AsyncMock()
@@ -48,7 +47,7 @@ def mock_client(test_config):
             "label": "Test",
             "folder": "/work",
             "status": "active",
-            "message_count": 2,
+            "messages": [],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
         }
@@ -75,23 +74,24 @@ class TestMemoryControllerInit:
 
     def test_init_with_config(self, test_config):
         """Test initialization with full config"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         assert client.config.api_key == test_config.api_key
         assert client.config.base_url == test_config.base_url
 
     def test_init_validates_api_key_length(self):
         """Test that short API keys raise error"""
-        from sekha import ClientConfig
-
         with pytest.raises(ValueError, match="too short"):
-            ClientConfig(api_key="sk-sekha-short")
+            config = ClientConfig(api_key="sk-sekha-short", base_url="http://localhost:8080")
+            MemoryController(config)
 
     def test_init_validates_base_url_format(self):
         """Test that invalid URLs raise error"""
-        from sekha import ClientConfig
-
         with pytest.raises(ValueError, match="Invalid base_url"):
-            ClientConfig(api_key="sk-sekha-" + "x" * 32, base_url="not-a-url")
+            config = ClientConfig(
+                api_key="sk-sekha-" + "x" * 32,
+                base_url="not-a-url",
+            )
+            MemoryController(config)
 
 
 # ==================== Conversation Creation Tests ====================
@@ -103,35 +103,35 @@ class TestCreateConversation:
     @pytest.mark.asyncio
     async def test_create_conversation_success(self, mock_client):
         """Test basic conversation creation"""
-        conv = NewConversation(
-            label="Test Conversation",
-            folder="/work",
-            messages=[
-                MessageDto(role=MessageRole.USER, content="Hello"),
-                MessageDto(role=MessageRole.ASSISTANT, content="Hi there!"),
+        conv: CreateConversationRequest = {
+            "label": "Test Conversation",
+            "folder": "/work",
+            "messages": [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"},
             ],
-        )
+        }
 
         result = await mock_client.create_conversation(conv)
 
-        assert result.label == "Test"
+        assert result["label"] == "Test"
         assert mock_client.client.post.called
 
     @pytest.mark.asyncio
     async def test_create_conversation_minimal(self, mock_client):
         """Test creating conversation with minimal data"""
-        conv = NewConversation(
-            label="Minimal Test",
-            messages=[MessageDto(role=MessageRole.USER, content="Test")],
-        )
+        conv: CreateConversationRequest = {
+            "label": "Minimal Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         result = await mock_client.create_conversation(conv)
-        assert result.id == "conv-123"
+        assert result["id"] == "conv-123"
 
     @pytest.mark.asyncio
     async def test_create_conversation_auth_error(self, test_config):
         """Test 401 error handling"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
 
         error_response = Mock()
         error_response.status_code = 401
@@ -147,9 +147,10 @@ class TestCreateConversation:
         client.client = AsyncMock()
         client.client.post = AsyncMock(side_effect=auth_error)
 
-        conv = NewConversation(
-            label="Test", messages=[MessageDto(role=MessageRole.USER, content="Test")]
-        )
+        conv: CreateConversationRequest = {
+            "label": "Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         with pytest.raises(SekhaAuthError):
             await client.create_conversation(conv)
@@ -170,9 +171,10 @@ class TestCreateConversation:
             )
         )
 
-        conv = NewConversation(
-            label="Test", messages=[MessageDto(role=MessageRole.USER, content="Test")]
-        )
+        conv: CreateConversationRequest = {
+            "label": "Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         with pytest.raises(SekhaValidationError, match="Invalid conversation data"):
             await mock_client.create_conversation(conv)
@@ -193,9 +195,10 @@ class TestCreateConversation:
             )
         )
 
-        conv = NewConversation(
-            label="Test", messages=[MessageDto(role=MessageRole.USER, content="Test")]
-        )
+        conv: CreateConversationRequest = {
+            "label": "Test",
+            "messages": [{"role": "user", "content": "Test"}],
+        }
 
         with pytest.raises(SekhaAPIError, match="429"):
             await mock_client.create_conversation(conv)
@@ -217,17 +220,15 @@ class TestSmartQuery:
                 "results": [
                     {
                         "conversation_id": "conv-456",
-                        "message_id": "msg-789",
                         "score": 0.92,
                         "content": "Authentication is handled via API keys",
                         "label": "Project:Auth",
                         "folder": "/work",
-                        "timestamp": datetime.now().isoformat(),
+                        "created_at": datetime.now().isoformat(),
                     }
                 ],
                 "total": 1,
-                "page": 1,
-                "page_size": 10,
+                "query": "How to handle authentication?",
             }
         )
 
@@ -239,9 +240,9 @@ class TestSmartQuery:
             filters={"label": "Project:Auth"},
         )
 
-        assert result.total == 1
-        assert len(result.results) == 1
-        assert result.results[0].score > 0.9
+        assert result["total"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["score"] > 0.9
 
     @pytest.mark.asyncio
     async def test_smart_query_empty_results(self, mock_client):
@@ -249,20 +250,15 @@ class TestSmartQuery:
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
         mock_response.json = Mock(
-            return_value={
-                "results": [],
-                "total": 0,
-                "page": 1,
-                "page_size": 10,
-            }
+            return_value={"results": [], "total": 0, "query": "non-existent topic"}
         )
 
         mock_client.client.post = AsyncMock(return_value=mock_response)
 
         result = await mock_client.smart_query(query="non-existent topic")
 
-        assert result.total == 0
-        assert len(result.results) == 0
+        assert result["total"] == 0
+        assert len(result["results"]) == 0
 
 
 # ==================== Memory Management Tests ====================
@@ -279,10 +275,8 @@ class TestMemoryManagement:
 
         mock_client.client.put = AsyncMock(return_value=mock_response)
 
-        # Use the correct method name
         await mock_client.pin_conversation("conv-123")
 
-        # Verify the call was made
         assert mock_client.client.put.called
         call_args = mock_client.client.put.call_args
         assert "conv-123/pin" in call_args[0][0]
@@ -295,7 +289,6 @@ class TestMemoryManagement:
 
         mock_client.client.put = AsyncMock(return_value=mock_response)
 
-        # Use the correct method name
         await mock_client.archive_conversation("conv-456")
 
         call_args = mock_client.client.put.call_args
@@ -396,7 +389,6 @@ class TestPruning:
 
         mock_client.client.post = AsyncMock(return_value=mock_response)
 
-        # Use the alias method
         result = await mock_client.get_pruning_suggestions(threshold_days=90)
 
         assert result["total"] == 2
@@ -455,16 +447,15 @@ class TestAsyncClient:
     @pytest.mark.asyncio
     async def test_async_context_manager(self, test_config):
         """Test async context manager usage"""
-        async with SekhaClient(test_config) as client:
-            assert isinstance(client, SekhaClient)
+        async with MemoryController(test_config) as client:
+            assert isinstance(client, MemoryController)
             assert client.client is not None
 
     @pytest.mark.asyncio
     async def test_async_cleanup(self, test_config):
         """Test proper cleanup of async resources"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
         await client.close()
-        # Should not raise any exceptions
 
 
 # ==================== Rate Limiting Tests ====================
@@ -476,9 +467,8 @@ class TestRateLimiting:
     @pytest.mark.asyncio
     async def test_rate_limiter_acquires(self, test_config):
         """Test rate limiter is called"""
-        client = SekhaClient(test_config)
+        client = MemoryController(test_config)
 
-        # Access the rate limiter
         assert client.rate_limiter.max_requests == 1000
         assert client.rate_limiter.window_seconds == 60.0
 
