@@ -21,7 +21,7 @@ Official Python client library for interacting with Sekha AI Memory System, prov
 - ✅ **Async/Await Support** - Built on httpx with connection pooling
 - ✅ **Automatic Retries** - Exponential backoff with jitter
 - ✅ **Rate Limiting** - Built-in rate limiter
-- ✅ **93% Test Coverage** - Comprehensive test suite
+- ✅ **90+% Test Coverage** - Comprehensive test suite
 - ✅ **19 API Endpoints** - Complete REST API coverage
 
 ---
@@ -43,7 +43,7 @@ Official Python client library for interacting with Sekha AI Memory System, prov
 
 ```bash
 # From PyPI (coming soon)
-pip install sekha-sdk
+pip install sekha-python-sdk
 
 # From source (current)
 git clone https://github.com/sekha-ai/sekha-python-sdk.git
@@ -246,7 +246,7 @@ from sekha.types import ClientConfig
 
 config = ClientConfig(
     base_url="http://localhost:8080",
-    api_key="sk-your-api-key-here",        # Required, min 20 chars
+    api_key="sk-your-api-key-here",         # Required, min 32 chars
     timeout=30.0,                           # Request timeout in seconds
     max_retries=3,                          # Max retry attempts
     default_label="MyApp",                  # Default conversation label
@@ -384,9 +384,9 @@ sekha-python-sdk/
 - [x] Comprehensive test coverage (v0.2.0)
 - [x] Integration tests with controller (v0.2.0)
 - [x] Fixed CI/CD pipeline (v0.2.0)
-- [ ] Bridge client implementation (v0.3.0)
-- [ ] MCP client implementation (v0.3.0)
-- [ ] Unified client workflows (v0.3.0)
+- [ ] Bridge client implementation (v0.2.0)
+- [ ] MCP client implementation (v0.2.0)
+- [ ] Unified client workflows (v0.2.0)
 - [ ] PyPI release (v1.0.0)
 - [ ] Streaming support for summaries
 - [ ] Batch operations
@@ -399,7 +399,7 @@ sekha-python-sdk/
 - **Main Repo:** [sekha-controller](https://github.com/sekha-ai/sekha-controller)
 - **Docs:** [docs.sekha.dev](https://docs.sekha.dev)
 - **Website:** [sekha.dev](https://sekha.dev)
-- **Discord:** [discord.gg/sekha](https://discord.gg/sekha)
+- **Discord:** [discord.gg/sekha](https://discord.gg/gZb7U9deKH)
 
 ---
 

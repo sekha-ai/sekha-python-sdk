@@ -66,10 +66,20 @@ include = [
   "CODE_OF_CONDUCT.md",
 ]
 exclude = [
-  "tests/**/*.pyc",
+  "tests/",
   "**/__pycache__",
   ".pytest_cache",
   ".coverage",
+  "htmlcov/",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".env*",
+  "*.log",
+  ".github/",
+  ".vscode/",
+  "*.pyc",
+  "dist/",
+  "build/",
 ]
 
 [tool.pytest.ini_options]
