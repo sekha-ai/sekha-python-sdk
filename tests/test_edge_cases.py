@@ -13,7 +13,7 @@ from sekha import (
     SekhaConnectionError,
     SekhaNotFoundError,
 )
-from sekha.types import CreateConversationRequest, Message
+from sekha.types import CreateConversationRequest, Message, ClientConfig
 
 
 @pytest.fixture
@@ -205,7 +205,6 @@ class TestRateLimiterBackoffCoverage:
     @pytest.mark.asyncio
     async def test_rate_limiter_edge_case(self, test_config):
         """Test rate limiter with very small window"""
-        from sekha.models import ClientConfig
         config = ClientConfig(
             api_key=test_config.api_key,
             base_url=test_config.base_url,
