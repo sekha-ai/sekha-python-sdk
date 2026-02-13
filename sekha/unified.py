@@ -1,5 +1,4 @@
-"""
-Sekha Unified Client
+"""\nSekha Unified Client
 
 Single interface combining Controller, MCP, and Bridge clients
 for complete Sekha ecosystem access.
@@ -9,8 +8,8 @@ from typing import Optional, List, Dict, Any, AsyncIterator
 from dataclasses import dataclass
 
 from .client import SekhaClient as MemoryController
-from .models import ClientConfig  # Import the dataclass, not TypedDict
 from .types import (
+    ClientConfig,  # Import dataclass from types, not the TypedDict from models
     Message,
     MessageContent,
 )
@@ -206,7 +205,7 @@ class SekhaClient:
         controller_config = ClientConfig(
             base_url=controller_url,
             api_key=api_key,
-            default_label=default_label,
+            default_label=default_label or "Conversation",
             timeout=timeout,
             max_retries=max_retries,
             rate_limit_requests=rate_limit_requests,
