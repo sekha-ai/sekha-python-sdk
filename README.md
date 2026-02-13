@@ -5,7 +5,7 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org)
 [![CI](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions)
+[![codecov](https://codecov.io/gh/sekha-ai/sekha-python-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-python-sdk)
 [![PyPI](https://img.shields.io/badge/pypi-coming--soon-orange.svg)](https://pypi.org)
 
 ---
@@ -379,13 +379,15 @@ sekha-python-sdk/
 
 ## 🗺️ Roadmap
 
-- [x] Memory Controller client (v0.1-v0.6)
-- [x] Type safety and validation (v0.6)
-- [x] Comprehensive test coverage (v0.6)
-- [ ] Bridge client implementation (v0.7)
-- [ ] MCP client implementation (v0.7)
-- [ ] Unified client workflows (v0.8)
-- [ ] PyPI release (v1.0)
+- [x] Memory Controller client (v0.1.0)
+- [x] Type safety and validation (v0.1.0)
+- [x] Comprehensive test coverage (v0.2.0)
+- [x] Integration tests with controller (v0.2.0)
+- [x] Fixed CI/CD pipeline (v0.2.0)
+- [ ] Bridge client implementation (v0.3.0)
+- [ ] MCP client implementation (v0.3.0)
+- [ ] Unified client workflows (v0.3.0)
+- [ ] PyPI release (v1.0.0)
 - [ ] Streaming support for summaries
 - [ ] Batch operations
 - [ ] Connection pooling optimizations
