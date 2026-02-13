@@ -17,8 +17,7 @@ from sekha import (
     SekhaValidationError,
     SekhaError,
 )
-from sekha.types import CreateConversationRequest, Message
-from sekha.models import ClientConfig
+from sekha.types import CreateConversationRequest, Message, ClientConfig
 
 # ==================== Fixtures ====================
 
