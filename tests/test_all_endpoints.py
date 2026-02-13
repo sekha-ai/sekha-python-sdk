@@ -11,7 +11,7 @@ import uuid
 import os
 from unittest.mock import Mock, AsyncMock
 from sekha import MemoryController, MessageRole
-from sekha.models import ClientConfig
+from sekha.types import ClientConfig  # Import dataclass from types, not models
 from datetime import datetime
 
 # Check if we should use real integration or mocks
