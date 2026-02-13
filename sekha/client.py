@@ -16,16 +16,11 @@ from .errors import (
 )
 from .models import (
     ClientConfig,
-    ConversationResponse,
     NewConversation,
-    QueryRequest as QueryRequestModel,
-    QueryResponse as QueryResponseModel,
 )
 from .types import (
     CreateConversationRequest,
-    QueryRequest,
     PruneResponse,
-    LabelSuggestResponse,
     SummaryResponse,
     FtsSearchResponse,
     ContextAssembly,

@@ -5,7 +5,6 @@ Provides type guard functions to validate types at runtime,
 especially useful for multi-modal content validation.
 """
 
-import sys
 from typing import Any, List, TypeGuard
 
 from .types import (

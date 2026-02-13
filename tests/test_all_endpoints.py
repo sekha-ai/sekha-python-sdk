@@ -10,7 +10,7 @@ import pytest
 import uuid
 import os
 from unittest.mock import Mock, AsyncMock
-from sekha import MemoryController, MessageRole
+from sekha import MemoryController
 from sekha.types import ClientConfig  # Import dataclass from types, not models
 from datetime import datetime
 
@@ -75,7 +75,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_create_conversation(self, client):
         """POST /api/v1/conversations"""
-        from sekha.types import CreateConversationRequest, Message
+        from sekha.types import CreateConversationRequest
 
         conversation: CreateConversationRequest = {
             "label": "test-label",

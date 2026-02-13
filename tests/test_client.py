@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
-from sekha import MemoryController, MessageRole
-from sekha.types import CreateConversationRequest, Message, Conversation
+from sekha import MemoryController
+from sekha.types import CreateConversationRequest, Message
 
 
 @pytest.fixture

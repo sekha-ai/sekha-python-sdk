@@ -1,6 +1,5 @@
 """Tests for type_guards module"""
 
-import pytest
 from sekha.type_guards import (
     is_string_content,
     is_multi_modal_content,
@@ -14,12 +13,6 @@ from sekha.type_guards import (
     is_valid_conversation_status,
     is_valid_prune_recommendation,
     is_valid_summary_level,
-)
-from sekha.types import (
-    MessageRole,
-    ConversationStatus,
-    PruneRecommendation,
-    SummaryLevel,
 )
 
 

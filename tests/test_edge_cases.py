@@ -8,12 +8,11 @@ import httpx
 
 from sekha import (
     MemoryController,
-    MessageRole,
     SekhaAPIError,
     SekhaConnectionError,
     SekhaNotFoundError,
 )
-from sekha.types import CreateConversationRequest, Message, ClientConfig
+from sekha.types import CreateConversationRequest, ClientConfig
 
 
 @pytest.fixture

@@ -9,7 +9,6 @@ import httpx
 
 from sekha import (
     MemoryController,
-    MessageRole,
     SekhaAPIError,
     SekhaAuthError,
     SekhaConnectionError,
@@ -17,7 +16,7 @@ from sekha import (
     SekhaValidationError,
     SekhaError,
 )
-from sekha.types import CreateConversationRequest, Message, ClientConfig
+from sekha.types import CreateConversationRequest, ClientConfig
 
 # ==================== Fixtures ====================
 

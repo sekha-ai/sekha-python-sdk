@@ -1,7 +1,6 @@
 """Tests for unified module"""
 
 import pytest
-from unittest.mock import AsyncMock, Mock
 
 from sekha.unified import (
     SekhaClient,
@@ -11,7 +10,6 @@ from sekha.unified import (
     message_content_to_string,
     create_sekha_client,
 )
-from sekha.types import ClientConfig
 
 
 class TestMessageContentToString:

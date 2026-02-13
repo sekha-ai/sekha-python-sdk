@@ -3,7 +3,6 @@
 import pytest
 from unittest.mock import Mock, AsyncMock
 from sekha import MemoryController
-from sekha.types import QueryResponse
 
 
 @pytest.fixture

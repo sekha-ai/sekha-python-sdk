@@ -1,6 +1,5 @@
 """Tests for TypedDict models"""
 
-import pytest
 from datetime import datetime
 from sekha.types import (
     MessageRole,
