@@ -76,7 +76,7 @@ class TestConversationEndpoints:
     async def test_create_conversation(self, client):
         """POST /api/v1/conversations"""
         from sekha.types import CreateConversationRequest, Message
-        
+
         conversation: CreateConversationRequest = {
             "label": "test-label",
             "folder": "test-folder",
@@ -271,12 +271,14 @@ class TestMemoryOrchestrationEndpoints:
         if not USE_REAL_CONTROLLER:
             mock_response = Mock()
             mock_response.raise_for_status = Mock()
-            mock_response.json = Mock(return_value={
-                "messages": [],
-                "token_count": 0,
-                "conversation_ids": [],
-                "labels": []
-            })
+            mock_response.json = Mock(
+                return_value={
+                    "messages": [],
+                    "token_count": 0,
+                    "conversation_ids": [],
+                    "labels": [],
+                }
+            )
             client.client.post = AsyncMock(return_value=mock_response)
 
         response = await client.assemble_context(
@@ -360,7 +362,12 @@ class TestMemoryOrchestrationEndpoints:
             return_value={
                 "conversation_id": test_conversation_id,
                 "suggestions": [],
-                "top_suggestion": {"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "test"},
+                "top_suggestion": {
+                    "label": "test",
+                    "confidence": 0.5,
+                    "folder": "/",
+                    "reasoning": "test",
+                },
             }
         )
         client.client.post = AsyncMock(return_value=mock_response)

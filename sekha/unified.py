@@ -22,20 +22,21 @@ from .types import (
 class SekhaConfig:
     """
     Unified Sekha configuration
-    
+
     Combines configuration for Controller, MCP, and Bridge services.
     """
+
     # Controller configuration
     controller_url: str
     api_key: str
-    
+
     # Bridge configuration
     bridge_url: str
     bridge_api_key: Optional[str] = None
-    
+
     # Optional MCP API key (defaults to api_key)
     mcp_api_key: Optional[str] = None
-    
+
     # Common configuration
     timeout: float = 30.0
     max_retries: int = 3
@@ -47,22 +48,22 @@ class SekhaConfig:
 class MCPClient:
     """
     Model Context Protocol (MCP) client
-    
+
     Provides MCP tools for memory operations.
     Currently a stub - will be fully implemented in future.
     """
-    
+
     def __init__(self, base_url: str, api_key: str, **kwargs):
         self.base_url = base_url
         self.api_key = api_key
-        self.timeout = kwargs.get('timeout', 30.0)
-        self.max_retries = kwargs.get('max_retries', 3)
-    
+        self.timeout = kwargs.get("timeout", 30.0)
+        self.max_retries = kwargs.get("max_retries", 3)
+
     async def memory_stats(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Get memory statistics"""
         # Stub - to be implemented
         raise NotImplementedError("MCP client not yet implemented")
-    
+
     async def memory_search(self, query: str, **kwargs) -> Dict[str, Any]:
         """MCP-based memory search"""
         # Stub - to be implemented
@@ -72,33 +73,33 @@ class MCPClient:
 class BridgeClient:
     """
     LLM Bridge client
-    
+
     Provides access to LLM operations (completion, embedding, etc).
     Currently a stub - will be fully implemented in future.
     """
-    
+
     def __init__(self, base_url: str, api_key: Optional[str] = None, **kwargs):
         self.base_url = base_url
         self.api_key = api_key
-        self.timeout = kwargs.get('timeout', 30.0)
-        self.max_retries = kwargs.get('max_retries', 3)
-    
+        self.timeout = kwargs.get("timeout", 30.0)
+        self.max_retries = kwargs.get("max_retries", 3)
+
     async def complete(self, **kwargs) -> Dict[str, Any]:
         """Generate LLM completion"""
         # Stub - to be implemented
         raise NotImplementedError("Bridge client not yet implemented")
-    
+
     async def stream_complete(self, **kwargs) -> AsyncIterator[Dict[str, Any]]:
         """Stream LLM completion"""
         # Stub - to be implemented
         raise NotImplementedError("Bridge client not yet implemented")
         yield  # Make it a generator
-    
+
     async def embed(self, text: str, **kwargs) -> Dict[str, Any]:
         """Generate text embedding"""
         # Stub - to be implemented
         raise NotImplementedError("Bridge client not yet implemented")
-    
+
     async def health(self) -> Dict[str, Any]:
         """Check bridge health"""
         # Stub - to be implemented
@@ -108,22 +109,22 @@ class BridgeClient:
 def message_content_to_string(content: MessageContent) -> str:
     """
     Convert MessageContent to string
-    
+
     Extracts text from multi-modal content or returns string as-is.
-    
+
     Args:
         content: Message content (string or list of content parts)
-        
+
     Returns:
         Text content as string
     """
     if isinstance(content, str):
         return content
-    
+
     # Extract text from content parts
     text_parts = [
-        part.get("text", "") 
-        for part in content 
+        part.get("text", "")
+        for part in content
         if isinstance(part, dict) and part.get("type") == "text"
     ]
     return " ".join(text_parts)
@@ -132,11 +133,11 @@ def message_content_to_string(content: MessageContent) -> str:
 class SekhaClient:
     """
     Unified Sekha Client
-    
+
     Combines MemoryController, MCPClient, and BridgeClient into a single
     interface. Provides direct access to all three clients plus high-level
     convenience methods for common workflows.
-    
+
     Example:
         ```python
         sekha = SekhaClient(
@@ -144,14 +145,14 @@ class SekhaClient:
             bridge_url='http://localhost:5001',
             api_key='your-api-key'
         )
-        
+
         # Use individual clients
         conversations = await sekha.controller.list()
         stats = await sekha.mcp.memory_stats({})
         completion = await sekha.bridge.complete(
             messages=[{'role': 'user', 'content': 'Hello'}]
         )
-        
+
         # Or use convenience methods
         response = await sekha.complete_with_memory(
             'Explain what we discussed about TypeScript',
@@ -159,7 +160,7 @@ class SekhaClient:
         )
         ```
     """
-    
+
     def __init__(
         self,
         controller_url: str,
@@ -175,7 +176,7 @@ class SekhaClient:
     ):
         """
         Initialize unified Sekha client
-        
+
         Args:
             controller_url: Memory controller base URL
             api_key: API key for controller
@@ -200,7 +201,7 @@ class SekhaClient:
             rate_limit_requests=rate_limit_requests,
             rate_limit_window=rate_limit_window,
         )
-        
+
         # Initialize Memory Controller with ClientConfig dataclass
         controller_config = ClientConfig(
             base_url=controller_url,
@@ -212,7 +213,7 @@ class SekhaClient:
             rate_limit_window=rate_limit_window,
         )
         self.controller = MemoryController(controller_config)
-        
+
         # Initialize MCP Client
         self.mcp = MCPClient(
             base_url=controller_url,
@@ -220,7 +221,7 @@ class SekhaClient:
             timeout=timeout,
             max_retries=max_retries,
         )
-        
+
         # Initialize Bridge Client
         self.bridge = BridgeClient(
             base_url=bridge_url,
@@ -228,24 +229,24 @@ class SekhaClient:
             timeout=timeout,
             max_retries=max_retries,
         )
-    
+
     async def __aenter__(self) -> "SekhaClient":
         """Async context manager entry"""
         await self.controller.__aenter__()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit"""
         await self.controller.__aexit__(exc_type, exc_val, exc_tb)
-    
+
     async def close(self) -> None:
         """Close all clients"""
         await self.controller.close()
-    
+
     # ============================================
     # Convenience Methods
     # ============================================
-    
+
     async def store_and_query(
         self,
         messages: List[Message],
@@ -256,19 +257,19 @@ class SekhaClient:
     ) -> Dict[str, Any]:
         """
         Store conversation and immediately search
-        
+
         Convenience method that stores messages then performs semantic search.
-        
+
         Args:
             messages: Messages to store
             query: Search query
             label: Conversation label
             folder: Conversation folder
             importance_score: Importance score (1-10)
-            
+
         Returns:
             Dictionary with 'conversation' and 'results' keys
-            
+
         Example:
             ```python
             results = await sekha.store_and_query(
@@ -280,28 +281,28 @@ class SekhaClient:
                 label='Engineering',
                 folder='/docs'
             )
-            
+
             print(f"Found {results['results'].total} related conversations")
             ```
         """
         from .models import NewConversation, MessageDto
-        
+
         # Store conversation
         conv = NewConversation(
             messages=[MessageDto(**msg) for msg in messages],  # type: ignore
-            label=label or self.config.default_label or 'Conversation',
-            folder=folder or '/',
+            label=label or self.config.default_label or "Conversation",
+            folder=folder or "/",
         )
         conversation = await self.controller.create_conversation(conv)
-        
+
         # Search
         results = await self.controller.query(query)
-        
+
         return {
-            'conversation': conversation,
-            'results': results,
+            "conversation": conversation,
+            "results": results,
         }
-    
+
     async def complete_with_context(
         self,
         prompt: str,
@@ -315,9 +316,9 @@ class SekhaClient:
     ) -> Dict[str, Any]:
         """
         Assemble context and generate completion
-        
+
         Gets relevant context from memory and uses it in LLM completion.
-        
+
         Args:
             prompt: User prompt
             context_query: Query to find relevant context
@@ -327,10 +328,10 @@ class SekhaClient:
             model: LLM model name
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
-            
+
         Returns:
             LLM completion response with context
-            
+
         Example:
             ```python
             response = await sekha.complete_with_context(
@@ -340,7 +341,7 @@ class SekhaClient:
                 preferred_labels=['Meetings'],
                 temperature=0.7
             )
-            
+
             print(response['choices'][0]['message']['content'])
             print(f"Used {len(response['context']['messages'])} context messages")
             ```
@@ -352,26 +353,26 @@ class SekhaClient:
             context_budget=context_budget or 4000,
             excluded_folders=excluded_folders,
         )
-        
+
         # Build messages with context
         messages = [
             {
-                'role': 'system',
-                'content': 'Use the following context from previous conversations to answer the question.',
+                "role": "system",
+                "content": "Use the following context from previous conversations to answer the question.",
             },
             *[
                 {
-                    'role': msg['role'],
-                    'content': message_content_to_string(msg['content']),
+                    "role": msg["role"],
+                    "content": message_content_to_string(msg["content"]),
                 }
-                for msg in context.get('messages', [])
+                for msg in context.get("messages", [])
             ],
             {
-                'role': 'user',
-                'content': prompt,
+                "role": "user",
+                "content": prompt,
             },
         ]
-        
+
         # Generate completion
         completion = await self.bridge.complete(
             model=model,
@@ -379,12 +380,12 @@ class SekhaClient:
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        
+
         return {
             **completion,
-            'context': context,
+            "context": context,
         }
-    
+
     async def complete_with_memory(
         self,
         prompt: str,
@@ -397,10 +398,10 @@ class SekhaClient:
     ) -> Dict[str, Any]:
         """
         Search memory and use results in completion
-        
+
         Performs semantic search and includes results in LLM prompt.
         Simpler than complete_with_context but less token-efficient.
-        
+
         Args:
             prompt: User prompt
             search_query: Query to search memory
@@ -409,10 +410,10 @@ class SekhaClient:
             model: LLM model name
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
-            
+
         Returns:
             LLM completion response with search results
-            
+
         Example:
             ```python
             response = await sekha.complete_with_memory(
@@ -421,7 +422,7 @@ class SekhaClient:
                 limit=5,
                 temperature=0.5
             )
-            
+
             print(response['choices'][0]['message']['content'])
             print(f"Used {response['search_results']['total']} search results")
             ```
@@ -430,31 +431,33 @@ class SekhaClient:
         search_results = await self.controller.query(
             query=search_query,
             limit=limit or 5,
-            filters={'labels': labels} if labels else None,
+            filters={"labels": labels} if labels else None,
         )
-        
+
         # Build context from search results
-        context_text = "\n\n".join([
-            f"[{i+1}] {r.label} (score: {r.score:.2f}):\n{r.content}"
-            for i, r in enumerate(search_results.results)
-        ])
-        
+        context_text = "\n\n".join(
+            [
+                f"[{i+1}] {r.label} (score: {r.score:.2f}):\n{r.content}"
+                for i, r in enumerate(search_results.results)
+            ]
+        )
+
         # Build messages
         messages = [
             {
-                'role': 'system',
-                'content': 'Use the following search results from memory to answer the question.',
+                "role": "system",
+                "content": "Use the following search results from memory to answer the question.",
             },
             {
-                'role': 'system',
-                'content': f"Search Results:\n{context_text}",
+                "role": "system",
+                "content": f"Search Results:\n{context_text}",
             },
             {
-                'role': 'user',
-                'content': prompt,
+                "role": "user",
+                "content": prompt,
             },
         ]
-        
+
         # Generate completion
         completion = await self.bridge.complete(
             model=model,
@@ -462,12 +465,12 @@ class SekhaClient:
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        
+
         return {
             **completion,
-            'search_results': search_results,
+            "search_results": search_results,
         }
-    
+
     async def stream_with_context(
         self,
         prompt: str,
@@ -479,9 +482,9 @@ class SekhaClient:
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Streaming completion with memory context
-        
+
         Assembles context and streams LLM response.
-        
+
         Args:
             prompt: User prompt
             context_query: Query to find relevant context
@@ -489,17 +492,17 @@ class SekhaClient:
             preferred_labels: Labels to prioritize
             model: LLM model name
             temperature: Sampling temperature
-            
+
         Yields:
             Completion chunks
-            
+
         Example:
             ```python
             stream = sekha.stream_with_context(
                 'Explain our TypeScript architecture',
                 'TypeScript architecture'
             )
-            
+
             async for chunk in stream:
                 content = chunk['choices'][0].get('delta', {}).get('content')
                 if content:
@@ -512,26 +515,26 @@ class SekhaClient:
             context_budget=context_budget or 4000,
             preferred_labels=preferred_labels,
         )
-        
+
         # Build messages
         messages = [
             {
-                'role': 'system',
-                'content': 'Use the following context to answer the question.',
+                "role": "system",
+                "content": "Use the following context to answer the question.",
             },
             *[
                 {
-                    'role': msg['role'],
-                    'content': message_content_to_string(msg['content']),
+                    "role": msg["role"],
+                    "content": message_content_to_string(msg["content"]),
                 }
-                for msg in context.get('messages', [])
+                for msg in context.get("messages", [])
             ],
             {
-                'role': 'user',
-                'content': prompt,
+                "role": "user",
+                "content": prompt,
             },
         ]
-        
+
         # Stream completion
         async for chunk in self.bridge.stream_complete(
             model=model,
@@ -539,16 +542,16 @@ class SekhaClient:
             temperature=temperature,
         ):
             yield chunk
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """
         Health check for all services
-        
+
         Checks controller and bridge health simultaneously.
-        
+
         Returns:
             Combined health status
-            
+
         Example:
             ```python
             health = await sekha.health_check()
@@ -557,52 +560,47 @@ class SekhaClient:
             ```
         """
         import asyncio
-        
+
         # Check controller and bridge health
         controller_result = await asyncio.gather(
-            self.controller.client.get('/health'),
-            return_exceptions=True
+            self.controller.client.get("/health"), return_exceptions=True
         )
-        
+
         bridge_result = await asyncio.gather(
-            self.bridge.health(),
-            return_exceptions=True
+            self.bridge.health(), return_exceptions=True
         )
-        
+
         return {
-            'controller': (
+            "controller": (
                 controller_result[0].json()
                 if not isinstance(controller_result[0], Exception)
-                else {'status': 'unhealthy', 'error': str(controller_result[0])}
+                else {"status": "unhealthy", "error": str(controller_result[0])}
             ),
-            'bridge': (
+            "bridge": (
                 bridge_result[0]
                 if not isinstance(bridge_result[0], Exception)
-                else {'status': 'unhealthy', 'error': str(bridge_result[0])}
+                else {"status": "unhealthy", "error": str(bridge_result[0])}
             ),
         }
 
 
 def create_sekha_client(
-    controller_url: str,
-    api_key: str,
-    bridge_url: str,
-    **kwargs
+    controller_url: str, api_key: str, bridge_url: str, **kwargs
 ) -> SekhaClient:
     """
     Create unified Sekha client
-    
+
     Convenience factory function.
-    
+
     Args:
         controller_url: Memory controller base URL
         api_key: API key
         bridge_url: LLM bridge base URL
         **kwargs: Additional configuration options
-        
+
     Returns:
         Initialized SekhaClient
-        
+
     Example:
         ```python
         sekha = create_sekha_client(
@@ -613,8 +611,5 @@ def create_sekha_client(
         ```
     """
     return SekhaClient(
-        controller_url=controller_url,
-        api_key=api_key,
-        bridge_url=bridge_url,
-        **kwargs
+        controller_url=controller_url, api_key=api_key, bridge_url=bridge_url, **kwargs
     )

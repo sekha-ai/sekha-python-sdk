@@ -188,9 +188,7 @@ def demo_validation():
     # Invalid values
     print("\nInvalid values:")
     print(f"  'admin' is valid role: {is_valid_role('admin')}")
-    print(
-        f"  'deleted' is valid status: {is_valid_conversation_status('deleted')}"
-    )
+    print(f"  'deleted' is valid status: {is_valid_conversation_status('deleted')}")
     print(
         f"  'destroy' is valid recommendation: "
         f"{is_valid_prune_recommendation('destroy')}"

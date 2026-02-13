@@ -26,9 +26,7 @@ class MessageDto(BaseModel):
         ..., description="Message content"
     )
     timestamp: Optional[datetime] = Field(None, description="Message timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Message metadata"
-    )
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
 
 
 class NewConversation(BaseModel):
@@ -56,9 +54,7 @@ class ConversationResponse(BaseModel):
     messages: List[MessageDto] = Field(..., description="Conversation messages")
     label: str = Field(..., description="Conversation label")
     folder: str = Field(..., description="Folder path")
-    importance_score: Optional[float] = Field(
-        None, description="Importance score"
-    )
+    importance_score: Optional[float] = Field(None, description="Importance score")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     archived: bool = Field(default=False, description="Archived status")
@@ -76,9 +72,7 @@ class SearchResult(BaseModel):
     content: str = Field(..., description="Result content")
     score: float = Field(..., description="Relevance score")
     created_at: datetime = Field(..., description="Creation timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Result metadata"
-    )
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Result metadata")
 
 
 class QueryRequest(BaseModel):
@@ -87,9 +81,7 @@ class QueryRequest(BaseModel):
     query: str = Field(..., description="Search query")
     limit: Optional[int] = Field(None, ge=1, le=100, description="Max results")
     offset: Optional[int] = Field(None, ge=0, description="Pagination offset")
-    filters: Optional[Dict[str, Any]] = Field(
-        None, description="Metadata filters"
-    )
+    filters: Optional[Dict[str, Any]] = Field(None, description="Metadata filters")
 
 
 class QueryResponse(BaseModel):

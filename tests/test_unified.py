@@ -141,14 +141,18 @@ class TestBridgeClient:
     async def test_bridge_complete_not_implemented(self):
         """Test Bridge complete raises NotImplementedError"""
         client = BridgeClient("http://localhost:5001")
-        with pytest.raises(NotImplementedError, match="Bridge client not yet implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Bridge client not yet implemented"
+        ):
             await client.complete()
 
     @pytest.mark.asyncio
     async def test_bridge_stream_complete_not_implemented(self):
         """Test Bridge stream_complete raises NotImplementedError"""
         client = BridgeClient("http://localhost:5001")
-        with pytest.raises(NotImplementedError, match="Bridge client not yet implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Bridge client not yet implemented"
+        ):
             async for _ in client.stream_complete():
                 pass
 
@@ -156,14 +160,18 @@ class TestBridgeClient:
     async def test_bridge_embed_not_implemented(self):
         """Test Bridge embed raises NotImplementedError"""
         client = BridgeClient("http://localhost:5001")
-        with pytest.raises(NotImplementedError, match="Bridge client not yet implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Bridge client not yet implemented"
+        ):
             await client.embed("test text")
 
     @pytest.mark.asyncio
     async def test_bridge_health_not_implemented(self):
         """Test Bridge health raises NotImplementedError"""
         client = BridgeClient("http://localhost:5001")
-        with pytest.raises(NotImplementedError, match="Bridge client not yet implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Bridge client not yet implemented"
+        ):
             await client.health()
 
 

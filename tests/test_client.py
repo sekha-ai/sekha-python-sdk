@@ -47,7 +47,7 @@ def mock_client(test_config):
 async def test_create_conversation(mock_client):
     """Test creating a conversation"""
     msg: Message = {"role": "user", "content": "Hello"}
-    
+
     conv: CreateConversationRequest = {
         "label": "Test",
         "folder": "/",

@@ -81,7 +81,9 @@ class TestMemoryControllerInit:
     def test_init_validates_api_key_length(self):
         """Test that short API keys raise error"""
         with pytest.raises(ValueError, match="too short"):
-            config = ClientConfig(api_key="sk-sekha-short", base_url="http://localhost:8080")
+            config = ClientConfig(
+                api_key="sk-sekha-short", base_url="http://localhost:8080"
+            )
             MemoryController(config)
 
     def test_init_validates_base_url_format(self):

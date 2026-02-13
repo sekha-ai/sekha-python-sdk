@@ -285,7 +285,14 @@ class TestNoneToEmptyList:
         client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"messages": [], "token_count": 0, "conversation_ids": [], "labels": []})
+        mock_response.json = Mock(
+            return_value={
+                "messages": [],
+                "token_count": 0,
+                "conversation_ids": [],
+                "labels": [],
+            }
+        )
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.assemble_context(
@@ -303,13 +310,15 @@ class TestKwargsAndAliases:
         client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={
-            "conversation_id": "123",
-            "summary": "test",
-            "level": "weekly",
-            "token_count": 100,
-            "created_at": datetime.now().isoformat()
-        })
+        mock_response.json = Mock(
+            return_value={
+                "conversation_id": "123",
+                "summary": "test",
+                "level": "weekly",
+                "token_count": 100,
+                "created_at": datetime.now().isoformat(),
+            }
+        )
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.summarize("123", level="weekly")
@@ -321,13 +330,15 @@ class TestKwargsAndAliases:
         client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={
-            "conversation_id": "123",
-            "summary": "test",
-            "level": "daily",
-            "token_count": 50,
-            "created_at": datetime.now().isoformat()
-        })
+        mock_response.json = Mock(
+            return_value={
+                "conversation_id": "123",
+                "summary": "test",
+                "level": "daily",
+                "token_count": 50,
+                "created_at": datetime.now().isoformat(),
+            }
+        )
         client.client.post = AsyncMock(return_value=mock_response)
 
         result = await client.generate_summary("123")
@@ -346,8 +357,20 @@ class TestAutoLabelPaths:
         mock_response.json = Mock(
             return_value={
                 "conversation_id": "123",
-                "suggestions": [{"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"}],
-                "top_suggestion": {"label": "test", "confidence": 0.5, "folder": "/", "reasoning": "low confidence"},
+                "suggestions": [
+                    {
+                        "label": "test",
+                        "confidence": 0.5,
+                        "folder": "/",
+                        "reasoning": "low confidence",
+                    }
+                ],
+                "top_suggestion": {
+                    "label": "test",
+                    "confidence": 0.5,
+                    "folder": "/",
+                    "reasoning": "low confidence",
+                },
             }
         )
         client.client.post = AsyncMock(return_value=mock_response)
@@ -365,9 +388,19 @@ class TestAutoLabelPaths:
             return_value={
                 "conversation_id": "123",
                 "suggestions": [
-                    {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"}
+                    {
+                        "label": "important",
+                        "confidence": 0.95,
+                        "folder": "/work",
+                        "reasoning": "high confidence",
+                    }
                 ],
-                "top_suggestion": {"label": "important", "confidence": 0.95, "folder": "/work", "reasoning": "high confidence"},
+                "top_suggestion": {
+                    "label": "important",
+                    "confidence": 0.95,
+                    "folder": "/work",
+                    "reasoning": "high confidence",
+                },
             }
         )
 
@@ -400,7 +433,13 @@ class TestExportFilters:
         client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
+        mock_response.json = Mock(
+            return_value={
+                "content": "# Export",
+                "format": "markdown",
+                "conversation_count": 1,
+            }
+        )
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(label="important")
@@ -412,7 +451,13 @@ class TestExportFilters:
         client = MemoryController(test_config)
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json = Mock(return_value={"content": "# Export", "format": "markdown", "conversation_count": 1})
+        mock_response.json = Mock(
+            return_value={
+                "content": "# Export",
+                "format": "markdown",
+                "conversation_count": 1,
+            }
+        )
         client.client.get = AsyncMock(return_value=mock_response)
 
         result = await client.export(folder="/work")

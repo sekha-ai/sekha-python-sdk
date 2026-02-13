@@ -208,7 +208,7 @@ class TestRateLimiterBackoffCoverage:
         config = ClientConfig(
             api_key=test_config.api_key,
             base_url=test_config.base_url,
-            rate_limit_window=0.001
+            rate_limit_window=0.001,
         )
         client = MemoryController(config)
 

@@ -15,7 +15,12 @@ from sekha.type_guards import (
     is_valid_prune_recommendation,
     is_valid_summary_level,
 )
-from sekha.types import MessageRole, ConversationStatus, PruneRecommendation, SummaryLevel
+from sekha.types import (
+    MessageRole,
+    ConversationStatus,
+    PruneRecommendation,
+    SummaryLevel,
+)
 
 
 class TestContentTypeGuards:
@@ -145,7 +150,10 @@ class TestContentExtraction:
             "role": "user",
             "content": [
                 {"type": "text", "text": "Look at this"},
-                {"type": "image_url", "image_url": {"url": "https://example.com/img.png"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/img.png"},
+                },
             ],
         }
         assert has_images(message) is True
@@ -174,7 +182,10 @@ class TestContentExtraction:
             "role": "user",
             "content": [
                 {"type": "text", "text": "Hello"},
-                {"type": "image_url", "image_url": {"url": "https://example.com/img.png"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/img.png"},
+                },
             ],
         }
         assert has_text(message) is True
@@ -194,7 +205,10 @@ class TestContentExtraction:
         message = {
             "role": "user",
             "content": [
-                {"type": "image_url", "image_url": {"url": "https://example.com/img.png"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/img.png"},
+                },
             ],
         }
         assert has_text(message) is False

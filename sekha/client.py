@@ -122,11 +122,11 @@ class SekhaClient:
 
         try:
             # Handle both Pydantic models and TypedDicts
-            if hasattr(conversation, 'model_dump'):
+            if hasattr(conversation, "model_dump"):
                 json_data = conversation.model_dump()
             else:
                 json_data = dict(conversation)  # TypedDict to dict
-                
+
             response = await self.client.post(
                 "/api/v1/conversations",
                 json=json_data,
@@ -153,10 +153,10 @@ class SekhaClient:
     async def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         """
         Get conversation by ID
-        
+
         Args:
             conversation_id: Conversation UUID
-            
+
         Returns:
             Conversation details
         """
@@ -185,7 +185,7 @@ class SekhaClient:
     ) -> Dict[str, Any]:
         """
         List conversations with optional filtering
-        
+
         Args:
             label: Filter by label
             folder: Filter by folder
@@ -193,7 +193,7 @@ class SekhaClient:
             archived: Filter by archived status
             page: Page number
             page_size: Results per page
-            
+
         Returns:
             Query response with conversations
         """
@@ -228,7 +228,7 @@ class SekhaClient:
     ) -> None:
         """
         Update conversation label and folder
-        
+
         Args:
             conversation_id: Conversation UUID
             new_label: New label name
@@ -259,7 +259,7 @@ class SekhaClient:
     ) -> None:
         """
         Update conversation folder
-        
+
         Args:
             conversation_id: Conversation UUID
             new_folder: New folder path
@@ -283,7 +283,7 @@ class SekhaClient:
     async def pin_conversation(self, conversation_id: str) -> None:
         """
         Pin a conversation (sets importance=10)
-        
+
         Args:
             conversation_id: Conversation UUID
         """
@@ -305,7 +305,7 @@ class SekhaClient:
     async def archive_conversation(self, conversation_id: str) -> None:
         """
         Archive a conversation
-        
+
         Args:
             conversation_id: Conversation UUID
         """
@@ -329,7 +329,7 @@ class SekhaClient:
     async def delete_conversation(self, conversation_id: str) -> None:
         """
         Delete a conversation
-        
+
         Args:
             conversation_id: Conversation UUID
         """
@@ -353,11 +353,11 @@ class SekhaClient:
     ) -> int:
         """
         Count conversations with optional filtering
-        
+
         Args:
             label: Filter by label
             folder: Filter by folder
-            
+
         Returns:
             Number of matching conversations
         """
@@ -439,26 +439,24 @@ class SekhaClient:
     async def smart_query(self, query: str, **kwargs) -> Dict[str, Any]:
         """
         Alias for query() - semantic query with smart ranking
-        
+
         Args:
             query: Search query
             **kwargs: Additional query options
-            
+
         Returns:
             Query response with results
         """
         return await self.query(query, **kwargs)
 
-    async def full_text_search(
-        self, query: str, limit: int = 10
-    ) -> FtsSearchResponse:
+    async def full_text_search(self, query: str, limit: int = 10) -> FtsSearchResponse:
         """
         Full-text search using SQLite FTS5
-        
+
         Args:
             query: Search text
             limit: Max results
-            
+
         Returns:
             Full-text search results
         """
@@ -499,13 +497,13 @@ class SekhaClient:
     ) -> ContextAssembly:
         """
         Assemble intelligent context for a query
-        
+
         Args:
             query: Query to build context for
             preferred_labels: Labels to prioritize
             context_budget: Token budget for context
             excluded_folders: Folders to exclude
-            
+
         Returns:
             Context assembly with messages
         """
@@ -555,16 +553,14 @@ class SekhaClient:
         except Exception as e:
             raise SekhaError(f"Failed to generate summary: {e}")
 
-    async def generate_summary(
-        self, conversation_id: str, **kwargs
-    ) -> SummaryResponse:
+    async def generate_summary(self, conversation_id: str, **kwargs) -> SummaryResponse:
         """
         Alias for summarize() - generate summary for conversation
-        
+
         Args:
             conversation_id: Conversation UUID
             **kwargs: Additional summarize options
-            
+
         Returns:
             Summary response
         """
@@ -573,10 +569,10 @@ class SekhaClient:
     async def prune_dry_run(self, threshold_days: int = 90) -> PruneResponse:
         """
         Get pruning suggestions without executing
-        
+
         Args:
             threshold_days: Days since last access threshold
-            
+
         Returns:
             Pruning suggestions
         """
@@ -596,10 +592,10 @@ class SekhaClient:
     async def get_pruning_suggestions(self, **kwargs) -> PruneResponse:
         """
         Alias for prune_dry_run() - get pruning suggestions
-        
+
         Args:
             **kwargs: Prune options
-            
+
         Returns:
             Pruning suggestions
         """
@@ -608,7 +604,7 @@ class SekhaClient:
     async def prune_execute(self, conversation_ids: List[str]) -> None:
         """
         Execute pruning (archive conversations)
-        
+
         Args:
             conversation_ids: List of conversation UUIDs to archive
         """
@@ -627,10 +623,10 @@ class SekhaClient:
     async def suggest_labels(self, conversation_id: str) -> Dict[str, Any]:
         """
         Get AI-powered label suggestions
-        
+
         Args:
             conversation_id: Conversation UUID
-            
+
         Returns:
             Label suggestions with confidence scores
         """

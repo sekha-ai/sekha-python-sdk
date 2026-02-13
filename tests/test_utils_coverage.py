@@ -19,11 +19,11 @@ class TestJsonSerializer:
 
     def test_json_serializer_with_dict_method(self):
         """Test serializer with object that has .dict() method"""
-        
+
         class MockObject:
             def dict(self):
                 return {"key": "value", "timestamp": datetime.now()}
-        
+
         obj = MockObject()
         result = json_serializer(obj)
         assert "key" in result
@@ -137,12 +137,12 @@ class TestRateLimiterEdgeCases:
     async def test_rate_limiter_zero_max_requests(self):
         """Test rate limiter with max_requests=0"""
         limiter = RateLimiter(max_requests=0, window_seconds=0.1)
-        
+
         # Should wait the full window
         start = asyncio.get_event_loop().time()
         await limiter.acquire()
         elapsed = asyncio.get_event_loop().time() - start
-        
+
         # Should have waited approximately the window time
         assert elapsed >= 0.09  # Allow small margin
 
@@ -150,16 +150,16 @@ class TestRateLimiterEdgeCases:
     async def test_rate_limiter_at_limit(self):
         """Test rate limiter when at limit"""
         limiter = RateLimiter(max_requests=2, window_seconds=0.2)
-        
+
         # First two should be immediate
         await limiter.acquire()
         await limiter.acquire()
-        
+
         # Third should wait
         start = asyncio.get_event_loop().time()
         await limiter.acquire()
         elapsed = asyncio.get_event_loop().time() - start
-        
+
         # Should have waited some time
         assert elapsed > 0.1
 
@@ -171,7 +171,7 @@ class TestExponentialBackoff:
     async def test_backoff_increases(self):
         """Test that backoff delay increases"""
         backoff = ExponentialBackoff(base_delay=0.01, max_delay=1.0, factor=2.0)
-        
+
         assert backoff.attempt == 0
         await backoff.wait()
         assert backoff.attempt == 1
@@ -182,11 +182,11 @@ class TestExponentialBackoff:
     async def test_backoff_max_delay(self):
         """Test that backoff respects max delay"""
         backoff = ExponentialBackoff(base_delay=0.1, max_delay=0.2, factor=2.0)
-        
+
         # After several attempts, should cap at max_delay
         for _ in range(5):
             await backoff.wait()
-        
+
         assert backoff.attempt == 5
 
     def test_backoff_reset(self):

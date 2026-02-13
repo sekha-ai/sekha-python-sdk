@@ -1,2 +1,0 @@
-# This file triggers Black formatting via CI
-# Run: black .
