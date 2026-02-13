@@ -54,11 +54,11 @@ class TestSekhaConfig:
         """Test creating config with minimal args"""
         config = SekhaConfig(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
         )
         assert config.controller_url == "http://localhost:8080"
-        assert config.api_key == "test-key"
+        assert config.api_key == "sk-test-12345678901234567890"
         assert config.bridge_url == "http://localhost:5001"
         assert config.timeout == 30.0
         assert config.max_retries == 3
@@ -67,7 +67,7 @@ class TestSekhaConfig:
         """Test creating config with all args"""
         config = SekhaConfig(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
             bridge_api_key="bridge-key",
             mcp_api_key="mcp-key",
@@ -91,26 +91,26 @@ class TestMCPClient:
         """Test MCP client initialization"""
         client = MCPClient(
             base_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             timeout=60.0,
             max_retries=5,
         )
         assert client.base_url == "http://localhost:8080"
-        assert client.api_key == "test-key"
+        assert client.api_key == "sk-test-12345678901234567890"
         assert client.timeout == 60.0
         assert client.max_retries == 5
 
     @pytest.mark.asyncio
     async def test_mcp_memory_stats_not_implemented(self):
         """Test MCP memory_stats raises NotImplementedError"""
-        client = MCPClient("http://localhost:8080", "test-key")
+        client = MCPClient("http://localhost:8080", "sk-test-12345678901234567890")
         with pytest.raises(NotImplementedError, match="MCP client not yet implemented"):
             await client.memory_stats({})
 
     @pytest.mark.asyncio
     async def test_mcp_memory_search_not_implemented(self):
         """Test MCP memory_search raises NotImplementedError"""
-        client = MCPClient("http://localhost:8080", "test-key")
+        client = MCPClient("http://localhost:8080", "sk-test-12345678901234567890")
         with pytest.raises(NotImplementedError, match="MCP client not yet implemented"):
             await client.memory_search("test")
 
@@ -174,11 +174,11 @@ class TestSekhaClientInit:
         """Test SekhaClient initialization with minimal args"""
         client = SekhaClient(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
         )
         assert client.config.controller_url == "http://localhost:8080"
-        assert client.config.api_key == "test-key"
+        assert client.config.api_key == "sk-test-12345678901234567890"
         assert client.config.bridge_url == "http://localhost:5001"
         assert client.controller is not None
         assert client.mcp is not None
@@ -188,10 +188,10 @@ class TestSekhaClientInit:
         """Test SekhaClient initialization with all args"""
         client = SekhaClient(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
             bridge_api_key="bridge-key",
-            mcp_api_key="mcp-key",
+            mcp_api_key="sk-test-mcp-key-12345678",
             timeout=60.0,
             max_retries=5,
             default_label="Test",
@@ -201,7 +201,7 @@ class TestSekhaClientInit:
         assert client.config.timeout == 60.0
         assert client.config.max_retries == 5
         assert client.config.default_label == "Test"
-        assert client.mcp.api_key == "mcp-key"
+        assert client.mcp.api_key == "sk-test-mcp-key-12345678"
         assert client.bridge.api_key == "bridge-key"
 
     @pytest.mark.asyncio
@@ -209,7 +209,7 @@ class TestSekhaClientInit:
         """Test SekhaClient as async context manager"""
         async with SekhaClient(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
         ) as client:
             assert client is not None
@@ -219,7 +219,7 @@ class TestSekhaClientInit:
         """Test SekhaClient close method"""
         client = SekhaClient(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
         )
         await client.close()
@@ -233,7 +233,7 @@ class TestCreateSekhaClient:
         """Test create_sekha_client factory"""
         client = create_sekha_client(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
         )
         assert isinstance(client, SekhaClient)
@@ -243,7 +243,7 @@ class TestCreateSekhaClient:
         """Test create_sekha_client with additional kwargs"""
         client = create_sekha_client(
             controller_url="http://localhost:8080",
-            api_key="test-key",
+            api_key="sk-test-12345678901234567890",
             bridge_url="http://localhost:5001",
             timeout=90.0,
             default_label="Custom",
