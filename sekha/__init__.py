@@ -91,7 +91,7 @@ from .type_guards import (
     is_valid_summary_level,
 )
 
-__version__ = "0.6.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # Unified Client (Recommended)
