@@ -227,8 +227,8 @@ class TestEnumValidators:
     def test_is_valid_prune_recommendation_with_valid_recommendations(self):
         """Test prune recommendation validation with valid values"""
         assert is_valid_prune_recommendation("keep") is True
+        assert is_valid_prune_recommendation("review") is True
         assert is_valid_prune_recommendation("archive") is True
-        assert is_valid_prune_recommendation("delete") is True
 
     def test_is_valid_prune_recommendation_with_invalid_recommendation(self):
         """Test prune recommendation validation with invalid value"""
