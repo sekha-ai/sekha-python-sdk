@@ -384,7 +384,7 @@ sekha-python-sdk/
 - [x] Comprehensive test coverage (v0.2.0)
 - [x] Integration tests with controller (v0.2.0)
 - [x] Fixed CI/CD pipeline (v0.2.0)
-- [ ] Bridge client implementation (v0.2.0)
+- [x] Bridge client implementation (v0.2.0)
 - [ ] MCP client implementation (v0.2.0)
 - [ ] Unified client workflows (v0.2.0)
 - [ ] PyPI release (v1.0.0)
