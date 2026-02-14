@@ -83,7 +83,7 @@ class TestSekhaConfig:
 
 
 class TestMCPClient:
-    """Test MCP client stub"""
+    """Test MCP client"""
 
     def test_mcp_client_init(self):
         """Test MCP client initialization"""
@@ -98,19 +98,30 @@ class TestMCPClient:
         assert client.timeout == 60.0
         assert client.max_retries == 5
 
-    @pytest.mark.asyncio
-    async def test_mcp_memory_stats_not_implemented(self):
-        """Test MCP memory_stats raises NotImplementedError"""
-        client = MCPClient("http://localhost:8080", "sk-test-12345678901234567890")
-        with pytest.raises(NotImplementedError, match="MCP client not yet implemented"):
-            await client.memory_stats({})
+    def test_mcp_client_has_http_client(self):
+        """Test MCP client creates HTTP client"""
+        client = MCPClient(
+            base_url="http://localhost:8080",
+            api_key="sk-test-12345678901234567890"
+        )
+        assert hasattr(client, '_client')
+        assert client._client is not None
 
     @pytest.mark.asyncio
-    async def test_mcp_memory_search_not_implemented(self):
-        """Test MCP memory_search raises NotImplementedError"""
+    async def test_mcp_client_context_manager(self):
+        """Test MCP client as async context manager"""
+        async with MCPClient("http://localhost:8080", "sk-test-12345678901234567890") as client:
+            assert client is not None
+
+    @pytest.mark.asyncio
+    async def test_mcp_client_close(self):
+        """Test MCP client close method"""
         client = MCPClient("http://localhost:8080", "sk-test-12345678901234567890")
-        with pytest.raises(NotImplementedError, match="MCP client not yet implemented"):
-            await client.memory_search("test")
+        await client.close()
+        # Verify no error raised
+
+    # Note: Comprehensive method tests (memory_stats, memory_search)
+    # are in test_mcp_client.py with proper mocking
 
 
 class TestBridgeClient:
@@ -138,7 +149,7 @@ class TestBridgeClient:
     def test_bridge_client_has_http_client(self):
         """Test Bridge client creates HTTP client"""
         client = BridgeClient(base_url="http://localhost:5001")
-        assert hasattr(client, "_client")
+        assert hasattr(client, '_client')
         assert client._client is not None
 
     @pytest.mark.asyncio
