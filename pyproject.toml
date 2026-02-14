@@ -7,18 +7,36 @@ name = "sekha-python-sdk"
 version = "0.2.0"
 description = "Python SDK for Sekha AI Memory System"
 readme = "README.md"
+long_description_content_type = "text/markdown"
 license = { file = "LICENSE" }
-requires-python = ">=3.8,<4.0"
+requires-python = ">=3.9,<4.0"
 authors = [
     { name = "Sekha AI", email = "jeff@sekha-ai.dev" },
 ]
-keywords = ["memory", "ai", "llm", "context", "sdk"]
+keywords = [
+    "memory", 
+    "ai", 
+    "llm", 
+    "context", 
+    "sdk", 
+    "sekha", 
+    "rag", 
+    "embeddings", 
+    "vector-search", 
+    "mcp",
+    "semantic-search",
+    "conversation-memory"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -41,6 +59,9 @@ dev = [
     "black>=23.0.0,<26.0",
     "isort>=5.12.0,<7.0",
     "mypy>=1.5.0,<2.0",
+    "ruff>=0.1.0,<1.0",
+    "bandit>=1.7.0,<2.0",
+    "safety>=2.0.0,<4.0",
 ]
 docs = [
     "mkdocs>=1.5.0,<2.0",
@@ -52,6 +73,7 @@ Homepage = "https://sekha.dev/"
 Documentation = "https://docs.sekha.dev"
 Repository = "https://github.com/sekha-ai/sekha-python-sdk"
 Issues = "https://github.com/sekha-ai/sekha-python-sdk/issues"
+Changelog = "https://github.com/sekha-ai/sekha-python-sdk/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["sekha"]
@@ -62,6 +84,7 @@ include = [
   "tests/**/*.py",
   "LICENSE",
   "README.md",
+  "CHANGELOG.md",
   "CONTRIBUTING.md",
   "CODE_OF_CONDUCT.md",
 ]
@@ -92,14 +115,14 @@ asyncio_mode = "auto"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
 
 [tool.isort]
 profile = "black"
 line_length = 88
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
