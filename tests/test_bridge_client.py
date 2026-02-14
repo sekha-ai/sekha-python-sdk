@@ -5,8 +5,9 @@ the LLM Bridge service API.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, Mock
 import httpx
+import json
 
 from sekha.unified import BridgeClient
 from sekha.errors import (
@@ -14,6 +15,25 @@ from sekha.errors import (
     SekhaAPIError,
     SekhaError,
 )
+
+
+class MockResponse:
+    """Mock httpx.Response object"""
+    def __init__(self, status_code: int, json_data: dict = None, text: str = ""):
+        self.status_code = status_code
+        self._json_data = json_data or {}
+        self.text = text
+    
+    def json(self):
+        return self._json_data
+    
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"HTTP {self.status_code}",
+                request=Mock(),
+                response=self
+            )
 
 
 class TestBridgeClientInit:
@@ -52,33 +72,33 @@ class TestBridgeClientComplete:
         client = BridgeClient("http://localhost:5001")
         
         # Mock response
-        mock_response = {
-            "id": "chatcmpl-abc123",
-            "object": "chat.completion",
-            "created": 1234567890,
-            "model": "llama3.1:8b",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "Hello! How can I help you?"
-                    },
-                    "finish_reason": "stop"
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion",
+                "created": 1234567890,
+                "model": "llama3.1:8b",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": "Hello! How can I help you?"
+                        },
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 15,
+                    "total_tokens": 25
                 }
-            ],
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 15,
-                "total_tokens": 25
             }
-        }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.complete(
                 messages=[
@@ -96,26 +116,26 @@ class TestBridgeClientComplete:
         """Test completion with optional parameters"""
         client = BridgeClient("http://localhost:5001")
         
-        mock_response = {
-            "id": "chatcmpl-xyz789",
-            "object": "chat.completion",
-            "created": 1234567890,
-            "model": "gpt-4",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": "Response"},
-                    "finish_reason": "stop"
-                }
-            ],
-            "usage": {"prompt_tokens": 20, "completion_tokens": 30, "total_tokens": 50}
-        }
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
+                "id": "chatcmpl-xyz789",
+                "object": "chat.completion",
+                "created": 1234567890,
+                "model": "gpt-4",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "Response"},
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {"prompt_tokens": 20, "completion_tokens": 30, "total_tokens": 50}
+            }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.complete(
                 messages=[{"role": "user", "content": "Test"}],
@@ -126,7 +146,7 @@ class TestBridgeClientComplete:
             
             assert result["model"] == "gpt-4"
             # Verify the request was made with correct params
-            call_args = mock_client.post.call_args
+            call_args = mock_request.call_args
             assert call_args[1]["json"]["model"] == "gpt-4"
             assert call_args[1]["json"]["temperature"] == 0.5
             assert call_args[1]["json"]["max_tokens"] == 1000
@@ -136,13 +156,14 @@ class TestBridgeClientComplete:
         """Test error handling in complete"""
         client = BridgeClient("http://localhost:5001")
         
-        with patch.object(client, '_client') as mock_client:
-            # Test 500 error
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=500,
-                text="Internal server error",
-                json=lambda: {"error": "Internal error"}
-            ))
+        # Test 500 error
+        mock_response = MockResponse(
+            status_code=500,
+            text="Internal server error"
+        )
+        
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             with pytest.raises(SekhaAPIError, match="500"):
                 await client.complete(messages=[{"role": "user", "content": "Test"}])
@@ -152,8 +173,8 @@ class TestBridgeClientComplete:
         """Test connection error handling"""
         client = BridgeClient("http://localhost:5001")
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection failed"))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.side_effect = httpx.ConnectError("Connection failed")
             
             with pytest.raises(SekhaConnectionError):
                 await client.complete(messages=[{"role": "user", "content": "Test"}])
@@ -167,18 +188,18 @@ class TestBridgeClientEmbed:
         """Test basic embedding generation"""
         client = BridgeClient("http://localhost:5001")
         
-        mock_response = {
-            "embedding": [0.1, 0.2, 0.3, 0.4],
-            "model": "nomic-embed-text",
-            "tokens_used": 10,
-            "dimension": 768
-        }
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
+                "embedding": [0.1, 0.2, 0.3, 0.4],
+                "model": "nomic-embed-text",
+                "tokens_used": 10,
+                "dimension": 768
+            }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.embed("Hello world")
             
@@ -192,18 +213,18 @@ class TestBridgeClientEmbed:
         """Test embedding with specific model"""
         client = BridgeClient("http://localhost:5001")
         
-        mock_response = {
-            "embedding": [0.5] * 1536,
-            "model": "text-embedding-3-small",
-            "tokens_used": 5,
-            "dimension": 1536
-        }
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
+                "embedding": [0.5] * 1536,
+                "model": "text-embedding-3-small",
+                "tokens_used": 5,
+                "dimension": 1536
+            }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.embed("Test", model="text-embedding-3-small")
             
@@ -211,7 +232,7 @@ class TestBridgeClientEmbed:
             assert len(result["embedding"]) == 1536
             
             # Verify request params
-            call_args = mock_client.post.call_args
+            call_args = mock_request.call_args
             assert call_args[1]["json"]["model"] == "text-embedding-3-small"
             assert call_args[1]["json"]["text"] == "Test"
 
@@ -220,12 +241,13 @@ class TestBridgeClientEmbed:
         """Test error handling in embed"""
         client = BridgeClient("http://localhost:5001")
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(return_value=MagicMock(
-                status_code=400,
-                text="Bad request",
-                json=lambda: {"error": "Invalid input"}
-            ))
+        mock_response = MockResponse(
+            status_code=400,
+            text="Bad request"
+        )
+        
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             with pytest.raises(SekhaAPIError):
                 await client.embed("")
@@ -239,21 +261,21 @@ class TestBridgeClientHealth:
         """Test successful health check"""
         client = BridgeClient("http://localhost:5001")
         
-        mock_response = {
-            "status": "healthy",
-            "timestamp": "2026-02-13T23:00:00Z",
-            "ollama_status": {
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
                 "status": "healthy",
-                "models_available": ["llama3.1:8b", "nomic-embed-text"]
-            },
-            "models_loaded": ["llama3.1:8b", "nomic-embed-text", "gpt-4o-mini"]
-        }
+                "timestamp": "2026-02-13T23:00:00Z",
+                "ollama_status": {
+                    "status": "healthy",
+                    "models_available": ["llama3.1:8b", "nomic-embed-text"]
+                },
+                "models_loaded": ["llama3.1:8b", "nomic-embed-text", "gpt-4o-mini"]
+            }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.get = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.health()
             
@@ -267,18 +289,18 @@ class TestBridgeClientHealth:
         """Test degraded health status"""
         client = BridgeClient("http://localhost:5001")
         
-        mock_response = {
-            "status": "degraded",
-            "timestamp": "2026-02-13T23:00:00Z",
-            "ollama_status": {"status": "unhealthy"},
-            "models_loaded": []
-        }
+        mock_response = MockResponse(
+            status_code=200,
+            json_data={
+                "status": "degraded",
+                "timestamp": "2026-02-13T23:00:00Z",
+                "ollama_status": {"status": "unhealthy"},
+                "models_loaded": []
+            }
+        )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.get = AsyncMock(return_value=MagicMock(
-                status_code=200,
-                json=lambda: mock_response
-            ))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             result = await client.health()
             
@@ -289,11 +311,13 @@ class TestBridgeClientHealth:
         """Test health check when service unavailable"""
         client = BridgeClient("http://localhost:5001")
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.get = AsyncMock(return_value=MagicMock(
-                status_code=503,
-                text="Service unavailable"
-            ))
+        mock_response = MockResponse(
+            status_code=503,
+            text="Service unavailable"
+        )
+        
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             
             with pytest.raises(SekhaAPIError, match="503"):
                 await client.health()
@@ -327,19 +351,17 @@ class TestBridgeClientRetry:
         
         call_count = 0
         
-        async def mock_post(*args, **kwargs):
+        async def mock_request(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count < 2:
                 raise httpx.TimeoutException("Timeout")
-            return MagicMock(
+            return MockResponse(
                 status_code=200,
-                json=lambda: {"embedding": [0.1], "model": "test", "tokens_used": 1, "dimension": 1}
+                json_data={"embedding": [0.1], "model": "test", "tokens_used": 1, "dimension": 1}
             )
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = mock_post
-            
+        with patch.object(client._client, 'request', side_effect=mock_request) as mock:
             result = await client.embed("test")
             
             assert call_count == 2  # Failed once, succeeded second time
@@ -350,8 +372,8 @@ class TestBridgeClientRetry:
         """Test when retries are exhausted"""
         client = BridgeClient("http://localhost:5001", max_retries=2)
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
+        with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
+            mock_request.side_effect = httpx.TimeoutException("Timeout")
             
             with pytest.raises(SekhaConnectionError):
                 await client.embed("test")
@@ -365,22 +387,27 @@ class TestBridgeClientStreamComplete:
         """Test basic streaming completion"""
         client = BridgeClient("http://localhost:5001")
         
-        # Mock streaming response chunks
-        mock_chunks = [
-            b'data: {"choices": [{"delta": {"content": "Hello"}}]}\n\n',
-            b'data: {"choices": [{"delta": {"content": " world"}}]}\n\n',
-            b'data: [DONE]\n\n'
-        ]
+        # Mock streaming response
+        class MockStreamResponse:
+            status_code = 200
+            
+            def raise_for_status(self):
+                pass
+            
+            async def aiter_lines(self):
+                yield "data: {\"choices\": [{\"delta\": {\"content\": \"Hello\"}}]}"
+                yield "data: {\"choices\": [{\"delta\": {\"content\": \" world\"}}]}"
+                yield "data: [DONE]"
         
-        async def mock_stream(*args, **kwargs):
-            for chunk in mock_chunks:
-                yield chunk
+        class MockStreamContext:
+            async def __aenter__(self):
+                return MockStreamResponse()
+            
+            async def __aexit__(self, *args):
+                pass
         
-        with patch.object(client, '_client') as mock_client:
-            mock_response = MagicMock()
-            mock_response.aiter_bytes = mock_stream
-            mock_response.status_code = 200
-            mock_client.stream = AsyncMock(return_value=mock_response)
+        with patch.object(client._client, 'stream') as mock_stream:
+            mock_stream.return_value = MockStreamContext()
             
             chunks = []
             async for chunk in client.stream_complete(
@@ -388,15 +415,16 @@ class TestBridgeClientStreamComplete:
             ):
                 chunks.append(chunk)
             
-            assert len(chunks) >= 2  # At least 2 content chunks
+            assert len(chunks) == 2  # Two content chunks before [DONE]
+            assert "choices" in chunks[0]
 
     @pytest.mark.asyncio
     async def test_stream_complete_error(self):
         """Test error handling in streaming"""
         client = BridgeClient("http://localhost:5001")
         
-        with patch.object(client, '_client') as mock_client:
-            mock_client.stream = AsyncMock(side_effect=httpx.ConnectError("Failed"))
+        with patch.object(client._client, 'stream') as mock_stream:
+            mock_stream.side_effect = httpx.ConnectError("Failed")
             
             with pytest.raises(SekhaConnectionError):
                 async for _ in client.stream_complete(
