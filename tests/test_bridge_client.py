@@ -165,8 +165,10 @@ class TestBridgeClientComplete:
         with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             
-            with pytest.raises(SekhaAPIError, match="500"):
+            with pytest.raises(SekhaAPIError) as exc_info:
                 await client.complete(messages=[{"role": "user", "content": "Test"}])
+            
+            assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_complete_connection_error(self):
@@ -249,8 +251,10 @@ class TestBridgeClientEmbed:
         with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             
-            with pytest.raises(SekhaAPIError):
+            with pytest.raises(SekhaAPIError) as exc_info:
                 await client.embed("")
+            
+            assert exc_info.value.status_code == 400
 
 
 class TestBridgeClientHealth:
@@ -319,8 +323,10 @@ class TestBridgeClientHealth:
         with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             
-            with pytest.raises(SekhaAPIError, match="503"):
+            with pytest.raises(SekhaAPIError) as exc_info:
                 await client.health()
+            
+            assert exc_info.value.status_code == 503
 
 
 class TestBridgeClientContextManager:
@@ -347,36 +353,39 @@ class TestBridgeClientRetry:
     @pytest.mark.asyncio
     async def test_retry_on_timeout(self):
         """Test retry on timeout error"""
-        client = BridgeClient("http://localhost:5001", max_retries=2)
+        client = BridgeClient("http://localhost:5001", max_retries=3)
         
         call_count = 0
         
         async def mock_request(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            if call_count < 2:
+            if call_count < 3:
                 raise httpx.TimeoutException("Timeout")
             return MockResponse(
                 status_code=200,
                 json_data={"embedding": [0.1], "model": "test", "tokens_used": 1, "dimension": 1}
             )
         
-        with patch.object(client._client, 'request', side_effect=mock_request) as mock:
+        with patch.object(client._client, 'request', side_effect=mock_request):
             result = await client.embed("test")
             
-            assert call_count == 2  # Failed once, succeeded second time
+            assert call_count == 3  # Failed twice, succeeded third time
             assert result["embedding"] == [0.1]
 
     @pytest.mark.asyncio
     async def test_retry_exhausted(self):
         """Test when retries are exhausted"""
-        client = BridgeClient("http://localhost:5001", max_retries=2)
+        client = BridgeClient("http://localhost:5001", max_retries=3)
         
         with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.TimeoutException("Timeout")
             
-            with pytest.raises(SekhaConnectionError):
+            with pytest.raises(SekhaConnectionError) as exc_info:
                 await client.embed("test")
+            
+            # Should have tried max_retries times
+            assert mock_request.call_count == 3
 
 
 class TestBridgeClientStreamComplete:
