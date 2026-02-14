@@ -5,15 +5,13 @@ the LLM Bridge service API.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
+from unittest.mock import AsyncMock, patch, Mock
 import httpx
-import json
 
 from sekha.unified import BridgeClient
 from sekha.errors import (
     SekhaConnectionError,
     SekhaAPIError,
-    SekhaError,
 )
 
 
@@ -381,7 +379,7 @@ class TestBridgeClientRetry:
         with patch.object(client._client, 'request', new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.TimeoutException("Timeout")
             
-            with pytest.raises(SekhaConnectionError) as exc_info:
+            with pytest.raises(SekhaConnectionError):
                 await client.embed("test")
             
             # Should have tried max_retries times
