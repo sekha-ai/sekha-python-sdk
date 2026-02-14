@@ -101,16 +101,17 @@ class TestMCPClient:
     def test_mcp_client_has_http_client(self):
         """Test MCP client creates HTTP client"""
         client = MCPClient(
-            base_url="http://localhost:8080",
-            api_key="sk-test-12345678901234567890"
+            base_url="http://localhost:8080", api_key="sk-test-12345678901234567890"
         )
-        assert hasattr(client, '_client')
+        assert hasattr(client, "_client")
         assert client._client is not None
 
     @pytest.mark.asyncio
     async def test_mcp_client_context_manager(self):
         """Test MCP client as async context manager"""
-        async with MCPClient("http://localhost:8080", "sk-test-12345678901234567890") as client:
+        async with MCPClient(
+            "http://localhost:8080", "sk-test-12345678901234567890"
+        ) as client:
             assert client is not None
 
     @pytest.mark.asyncio
@@ -149,7 +150,7 @@ class TestBridgeClient:
     def test_bridge_client_has_http_client(self):
         """Test Bridge client creates HTTP client"""
         client = BridgeClient(base_url="http://localhost:5001")
-        assert hasattr(client, '_client')
+        assert hasattr(client, "_client")
         assert client._client is not None
 
     @pytest.mark.asyncio

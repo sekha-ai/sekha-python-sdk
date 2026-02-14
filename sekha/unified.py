@@ -222,9 +222,7 @@ class MCPClient:
 
         return response.json()
 
-    async def memory_search(
-        self, query: str, **kwargs
-    ) -> Dict[str, Any]:
+    async def memory_search(self, query: str, **kwargs) -> Dict[str, Any]:
         """
         Search memory using semantic search
 
@@ -265,10 +263,7 @@ class MCPClient:
             ```
         """
         # Build request payload
-        payload = {
-            "query": query,
-            **kwargs
-        }
+        payload = {"query": query, **kwargs}
 
         # Make request
         response = await self._request_with_retry(
