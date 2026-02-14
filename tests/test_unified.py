@@ -114,7 +114,7 @@ class TestMCPClient:
 
 
 class TestBridgeClient:
-    """Test Bridge client stub"""
+    """Test Bridge client"""
 
     def test_bridge_client_init(self):
         """Test Bridge client initialization"""
@@ -135,42 +135,27 @@ class TestBridgeClient:
         assert client.base_url == "http://localhost:5001"
         assert client.api_key is None
 
-    @pytest.mark.asyncio
-    async def test_bridge_complete_not_implemented(self):
-        """Test Bridge complete raises NotImplementedError"""
-        client = BridgeClient("http://localhost:5001")
-        with pytest.raises(
-            NotImplementedError, match="Bridge client not yet implemented"
-        ):
-            await client.complete()
+    def test_bridge_client_has_http_client(self):
+        """Test Bridge client creates HTTP client"""
+        client = BridgeClient(base_url="http://localhost:5001")
+        assert hasattr(client, '_client')
+        assert client._client is not None
 
     @pytest.mark.asyncio
-    async def test_bridge_stream_complete_not_implemented(self):
-        """Test Bridge stream_complete raises NotImplementedError"""
-        client = BridgeClient("http://localhost:5001")
-        with pytest.raises(
-            NotImplementedError, match="Bridge client not yet implemented"
-        ):
-            async for _ in client.stream_complete():
-                pass
+    async def test_bridge_client_context_manager(self):
+        """Test Bridge client as async context manager"""
+        async with BridgeClient("http://localhost:5001") as client:
+            assert client is not None
 
     @pytest.mark.asyncio
-    async def test_bridge_embed_not_implemented(self):
-        """Test Bridge embed raises NotImplementedError"""
+    async def test_bridge_client_close(self):
+        """Test Bridge client close method"""
         client = BridgeClient("http://localhost:5001")
-        with pytest.raises(
-            NotImplementedError, match="Bridge client not yet implemented"
-        ):
-            await client.embed("test text")
+        await client.close()
+        # Verify no error raised
 
-    @pytest.mark.asyncio
-    async def test_bridge_health_not_implemented(self):
-        """Test Bridge health raises NotImplementedError"""
-        client = BridgeClient("http://localhost:5001")
-        with pytest.raises(
-            NotImplementedError, match="Bridge client not yet implemented"
-        ):
-            await client.health()
+    # Note: Comprehensive method tests (complete, embed, health, stream_complete)
+    # are in test_bridge_client.py with proper mocking
 
 
 class TestSekhaClientInit:
