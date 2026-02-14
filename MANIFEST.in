@@ -1,0 +1,35 @@
+# Include documentation
+include README.md
+include CHANGELOG.md
+include LICENSE
+include CONTRIBUTING.md
+include CODE_OF_CONDUCT.md
+
+# Include type marker
+include sekha/py.typed
+
+# Include package data
+recursive-include sekha *.py *.typed
+
+# Exclude tests and development files
+exclude tests/*
+recursive-exclude tests *
+exclude .github/*
+recursive-exclude .github *
+
+# Exclude build artifacts
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude *.dylib
+global-exclude .coverage
+global-exclude .pytest_cache
+global-exclude htmlcov
+global-exclude .mypy_cache
+global-exclude .ruff_cache
+
+# Exclude environment files
+global-exclude .env
+global-exclude .env.*
+global-exclude *.log
