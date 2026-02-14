@@ -325,10 +325,9 @@ class TestStreamWithContext:
         with patch.object(
             client.controller, "assemble_context", new_callable=AsyncMock
         ) as mock_assemble:
-            with patch.object(
-                client.bridge, "stream_complete", new_callable=AsyncMock
-            ) as mock_stream:
+            with patch.object(client.bridge, "stream_complete") as mock_stream:
                 mock_assemble.return_value = mock_context
+                # Return the generator directly, not wrapped in AsyncMock
                 mock_stream.return_value = mock_stream_generator()
 
                 chunks = []
@@ -359,16 +358,18 @@ class TestStreamWithContext:
 
         mock_context = {"messages": []}
 
+        # Create error that will be raised during iteration
+        async def error_generator():
+            if False:
+                yield  # Make it a generator
+            raise SekhaAPIError("Stream failed", status_code=500, response="Server error")
+
         with patch.object(
             client.controller, "assemble_context", new_callable=AsyncMock
         ) as mock_assemble:
-            with patch.object(
-                client.bridge, "stream_complete", new_callable=AsyncMock
-            ) as mock_stream:
+            with patch.object(client.bridge, "stream_complete") as mock_stream:
                 mock_assemble.return_value = mock_context
-                mock_stream.side_effect = SekhaAPIError(
-                    "Stream failed", status_code=500
-                )
+                mock_stream.return_value = error_generator()
 
                 with pytest.raises(SekhaAPIError):
                     async for _ in client.stream_with_context(
@@ -549,7 +550,13 @@ class TestWorkflowIntegration:
                     client.bridge, "complete", new_callable=AsyncMock
                 ) as mock_complete:
                     mock_create.return_value = Mock(id="conv-123")
-                    mock_query.return_value = Mock(total=1, results=[Mock()])
+                    # Create mock with proper attributes for f-string formatting
+                    mock_result = Mock(
+                        label="Engineering",
+                        content="Test content",
+                        score=0.95,
+                    )
+                    mock_query.return_value = Mock(total=1, results=[mock_result])
                     mock_completion = {"choices": [{"message": {"content": "test"}}]}
                     mock_complete.return_value = mock_completion
 
