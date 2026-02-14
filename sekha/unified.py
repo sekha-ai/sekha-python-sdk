@@ -158,47 +158,46 @@ class BridgeClient:
         await self._client.aclose()
 
     async def _request_with_retry(
-        self,
-        method: str,
-        endpoint: str,
-        **kwargs
+        self, method: str, endpoint: str, **kwargs
     ) -> httpx.Response:
         """Make HTTP request with automatic retries"""
         last_exception = None
-        
+
         for attempt in range(self.max_retries):
             try:
                 response = await self._client.request(method, endpoint, **kwargs)
                 response.raise_for_status()
                 return response
-                
+
             except httpx.HTTPStatusError as e:
                 # Don't retry on client errors (4xx) except 429
                 if e.response.status_code < 500 and e.response.status_code != 429:
                     if e.response.status_code == 401:
-                        raise SekhaAuthError(f"Authentication failed: {e.response.text}")
+                        raise SekhaAuthError(
+                            f"Authentication failed: {e.response.text}"
+                        )
                     else:
                         raise SekhaAPIError(
                             f"Bridge request failed: {e.response.text}",
                             status_code=e.response.status_code,
                             response=e.response.text,
                         )
-                
+
                 # Retry on 5xx and 429
                 last_exception = e
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
                 continue
-                
+
             except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout) as e:
                 last_exception = e
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
                 continue
-                
+
             except Exception as e:
                 raise SekhaError(f"Unexpected error: {str(e)}")
-        
+
         # All retries exhausted
         if isinstance(last_exception, httpx.HTTPStatusError):
             raise SekhaAPIError(
@@ -217,7 +216,7 @@ class BridgeClient:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Generate chat completion
@@ -285,7 +284,7 @@ class BridgeClient:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Generate streaming chat completion
@@ -376,10 +375,7 @@ class BridgeClient:
             raise SekhaError(f"Streaming error: {str(e)}")
 
     async def embed(
-        self,
-        text: str,
-        model: Optional[str] = None,
-        **kwargs
+        self, text: str, model: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """
         Generate text embedding

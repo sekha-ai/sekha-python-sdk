@@ -138,7 +138,7 @@ class TestBridgeClient:
     def test_bridge_client_has_http_client(self):
         """Test Bridge client creates HTTP client"""
         client = BridgeClient(base_url="http://localhost:5001")
-        assert hasattr(client, '_client')
+        assert hasattr(client, "_client")
         assert client._client is not None
 
     @pytest.mark.asyncio
