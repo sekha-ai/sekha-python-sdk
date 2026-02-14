@@ -7,6 +7,7 @@
 [![CI](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-python-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-python-sdk)
 [![PyPI](https://img.shields.io/badge/pypi-coming--soon-orange.svg)](https://pypi.org)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/sekha-ai/sekha-python-sdk/blob/main/CHANGELOG.md)
 
 ---
 
@@ -16,13 +17,15 @@ Official Python client library for interacting with Sekha AI Memory System, prov
 
 **Features:**
 
-- ✅ **Unified Client Interface** - Single client for all services
+- ✅ **Unified Client Interface** - Single client for all services (Controller, MCP, Bridge)
 - ✅ **Full Type Safety** - Complete type hints with runtime validation
 - ✅ **Async/Await Support** - Built on httpx with connection pooling
+- ✅ **Streaming Support** - Server-sent events for LLM completions
 - ✅ **Automatic Retries** - Exponential backoff with jitter
-- ✅ **Rate Limiting** - Built-in rate limiter
-- ✅ **90+% Test Coverage** - Comprehensive test suite
-- ✅ **19 API Endpoints** - Complete REST API coverage
+- ✅ **Rate Limiting** - Built-in token bucket rate limiter
+- ✅ **90+% Test Coverage** - Comprehensive test suite (2,000+ lines)
+- ✅ **Complete API Coverage** - 19 Controller + 4 Bridge + 2 MCP endpoints
+- ✅ **5 Convenience Workflows** - High-level methods for common patterns
 
 ---
 
@@ -34,6 +37,7 @@ Official Python client library for interacting with Sekha AI Memory System, prov
 - [API Reference](https://docs.sekha.dev/api-reference/rest-api/)
 - [Code Examples](https://docs.sekha.dev/sdks/examples/)
 - [Getting Started](https://docs.sekha.dev/getting-started/quickstart/)
+- [Changelog](https://github.com/sekha-ai/sekha-python-sdk/blob/main/CHANGELOG.md)
 
 ---
 
@@ -51,19 +55,19 @@ cd sekha-python-sdk
 pip install -e .
 ```
 
-### Basic Usage - Unified Client
+### Basic Usage - Unified Client (Recommended)
 
 ```python
 from sekha import SekhaClient
 
-# Initialize unified client (recommended)
+# Initialize unified client with all services
 client = SekhaClient(
     controller_url="http://localhost:8080",
     api_key="sk-your-api-key-here",
-    bridge_url="http://localhost:5001",  # optional
+    bridge_url="http://localhost:5001",  # Optional
 )
 
-# Access individual service clients
+# ===== CONTROLLER: Memory Operations =====
 await client.controller.create_conversation({
     "label": "My Conversation",
     "messages": [
@@ -72,26 +76,97 @@ await client.controller.create_conversation({
     ]
 })
 
-# Future: Bridge and MCP clients (stubs currently)
-# await client.bridge.complete(...)
-# await client.mcp.memory_stats({...})
+# ===== BRIDGE: LLM Completions =====
+response = await client.bridge.complete(
+    messages=[
+        {"role": "user", "content": "Explain quantum computing"}
+    ],
+    model="gpt-4",
+    temperature=0.7
+)
+print(response["choices"][0]["message"]["content"])
+
+# ===== BRIDGE: Streaming Completions =====
+async for chunk in await client.bridge.stream_complete(
+    messages=[{"role": "user", "content": "Tell me a story"}],
+    model="gpt-4"
+):
+    print(chunk["choices"][0]["delta"].get("content", ""), end="")
+
+# ===== MCP: Memory Statistics =====
+stats = await client.mcp.memory_stats({
+    "labels": ["important"],
+    "start_date": "2026-01-01T00:00:00Z"
+})
+print(f"Total conversations: {stats['total_conversations']}")
+
+# ===== MCP: Memory Search =====
+results = await client.mcp.memory_search({
+    "query": "project architecture",
+    "limit": 5,
+    "labels": ["technical"]
+})
+for result in results["results"]:
+    print(f"{result['label']}: {result['content']}")
+```
+
+### Unified Workflow Methods (NEW in v0.2.0)
+
+High-level convenience methods that coordinate multiple services:
+
+```python
+# 1. Store conversation and immediately search
+results = await client.store_and_query(
+    messages=[
+        {"role": "user", "content": "Discussed project timeline"},
+        {"role": "assistant", "content": "2 week sprint cycle"}
+    ],
+    query="timeline",
+    label="Planning"
+)
+
+# 2. Assemble context from memory + generate LLM completion
+response = await client.complete_with_context(
+    prompt="Continue our architecture discussion",
+    context_query="architecture decisions",
+    model="gpt-4",
+    context_budget=4000
+)
+
+# 3. Search memory + use results in LLM prompt
+response = await client.complete_with_memory(
+    prompt="Summarize our past discussions about:",
+    search_query="architecture microservices",
+    model="gpt-4",
+    limit=5
+)
+
+# 4. Stream LLM response with assembled context
+async for chunk in await client.stream_with_context(
+    prompt="Explain our deployment strategy",
+    context_query="deployment docker kubernetes",
+    model="gpt-4"
+):
+    print(chunk["choices"][0]["delta"].get("content", ""), end="")
+
+# 5. Health check all services concurrently
+health = await client.health_check()
+print(f"Controller: {health['controller']['status']}")
+print(f"Bridge: {health['bridge']['status']}")
 ```
 
 ### Basic Usage - Memory Controller Only
 
 ```python
 from sekha import MemoryController
-from sekha.types import ClientConfig
 
-# Direct controller client
-config = ClientConfig(
+# Direct controller client (no Bridge/MCP)
+client = MemoryController(
     base_url="http://localhost:8080",
     api_key="sk-your-api-key-here",
     timeout=30.0,
     max_retries=3
 )
-
-client = MemoryController(config)
 
 # Store a conversation
 conversation = await client.create_conversation({
@@ -127,9 +202,10 @@ async with SekhaClient(
     api_key="sk-your-api-key",
     bridge_url="http://localhost:5001"
 ) as client:
-    # Client automatically closes on exit
-    conversation = await client.controller.create_conversation({...})
-    results = await client.controller.query("search query")
+    # All clients automatically close on exit
+    await client.controller.create_conversation({...})
+    await client.bridge.complete(messages=[...])
+    await client.mcp.memory_stats({})
 ```
 
 ### Factory Function
@@ -142,18 +218,17 @@ client = create_sekha_client(
     controller_url="http://localhost:8080",
     api_key="sk-your-api-key",
     bridge_url="http://localhost:5001",
-    timeout=60.0,
-    default_label="Production"
+    timeout=60.0
 )
 ```
 
-**[Full examples](https://docs.sekha.dev/sdks/python-sdk/)**
-
 ---
 
-## 📋 API Coverage - 19 Endpoints
+## 📋 Complete API Coverage
 
-### Conversation Management (9 endpoints)
+### Controller (Memory Operations) - 19 Endpoints
+
+#### Conversation Management (9 endpoints)
 - ✅ `create_conversation` - Store new conversations with messages
 - ✅ `get_conversation` - Retrieve conversation by ID
 - ✅ `list_conversations` - List with filtering and pagination
@@ -164,21 +239,41 @@ client = create_sekha_client(
 - ✅ `delete_conversation` - Permanently delete
 - ✅ `count_conversations` - Get total count
 
-### Search & Query (3 endpoints)
+#### Search & Query (3 endpoints)
 - ✅ `query` - Semantic search using vector similarity
 - ✅ `full_text_search` - SQLite FTS5 full-text search
 - ✅ `rebuild_embeddings` - Trigger embedding rebuild
 
-### Memory Orchestration (5 endpoints)
+#### Memory Orchestration (5 endpoints)
 - ✅ `assemble_context` - Intelligent context assembly for LLMs
 - ✅ `summarize` - Generate hierarchical summaries
 - ✅ `prune_dry_run` - Get pruning suggestions
 - ✅ `prune_execute` - Execute pruning operations
 - ✅ `suggest_labels` - AI-powered label suggestions
 
-### Health & Metrics (2 endpoints)
-- ✅ Health checks
-- ✅ Prometheus metrics
+#### Health & Metrics (2 endpoints)
+- ✅ `health` - Health check endpoint
+- ✅ `metrics` - Prometheus metrics
+
+### Bridge (LLM Integration) - 4 Endpoints
+
+- ✅ `complete` - Generate chat completions (OpenAI-compatible)
+- ✅ `stream_complete` - Streaming chat completions with SSE
+- ✅ `embed` - Generate text embeddings
+- ✅ `health` - Bridge service health check
+
+### MCP (Model Context Protocol) - 2 Endpoints
+
+- ✅ `memory_stats` - Get memory statistics with filtering
+- ✅ `memory_search` - Semantic memory search with pagination
+
+### Unified Workflows - 5 Convenience Methods
+
+- ✅ `store_and_query` - Store conversation and immediately search
+- ✅ `complete_with_context` - Assemble context + generate completion
+- ✅ `complete_with_memory` - Search memory + use in prompt
+- ✅ `stream_with_context` - Stream completion with context
+- ✅ `health_check` - Check all services concurrently
 
 **[Complete API Reference](https://docs.sekha.dev/api-reference/rest-api/)**
 
@@ -239,10 +334,31 @@ text = extract_text(message["content"])
 
 ## 🔧 Configuration
 
-### ClientConfig
+### SekhaConfig (Unified Client)
+
+```python
+from sekha import SekhaConfig, SekhaClient
+
+# Full configuration options
+config = SekhaConfig(
+    controller_url="http://localhost:8080",
+    api_key="sk-controller-key",          # Required
+    bridge_url="http://localhost:5001",   # Optional
+    bridge_api_key="bridge-key",          # Optional
+    mcp_url="http://localhost:8080",      # Optional (defaults to controller)
+    mcp_api_key="sk-mcp-key",            # Optional
+    timeout=30.0,
+    max_retries=3,
+)
+
+client = SekhaClient(config)
+```
+
+### ClientConfig (Individual Clients)
 
 ```python
 from sekha.types import ClientConfig
+from sekha import MemoryController
 
 config = ClientConfig(
     base_url="http://localhost:8080",
@@ -253,22 +369,8 @@ config = ClientConfig(
     rate_limit_requests=1000,               # Max requests per window
     rate_limit_window=60.0,                 # Rate limit window in seconds
 )
-```
 
-### SekhaConfig (Unified Client)
-
-```python
-from sekha import SekhaConfig
-
-config = SekhaConfig(
-    controller_url="http://localhost:8080",
-    api_key="sk-controller-key",
-    bridge_url="http://localhost:5001",
-    bridge_api_key="bridge-key",           # Optional
-    mcp_api_key="sk-mcp-key",              # Optional
-    timeout=30.0,
-    max_retries=3,
-)
+client = MemoryController(config)
 ```
 
 ---
@@ -288,7 +390,7 @@ from sekha import (
 )
 
 try:
-    await client.get_conversation(conversation_id)
+    await client.controller.get_conversation(conversation_id)
 except SekhaNotFoundError:
     print("Conversation not found")
 except SekhaAuthError:
@@ -365,13 +467,17 @@ sekha-python-sdk/
 │   ├── errors.py             # Exception hierarchy
 │   └── utils.py              # Utilities (rate limiter, validators)
 ├── tests/
-│   ├── conftest.py           # Pytest fixtures
-│   ├── test_client_complete.py      # Unit tests
+│   ├── conftest.py                  # Pytest fixtures
+│   ├── test_client_complete.py      # Controller tests
+│   ├── test_bridge_client.py        # Bridge tests (528 lines)
+│   ├── test_mcp_client.py           # MCP tests (442 lines)
+│   ├── test_unified_workflows.py    # Workflow tests (616 lines)
 │   ├── test_type_guards.py          # Type guard tests
 │   ├── test_unified.py              # Unified client tests
 │   ├── test_utils_coverage.py       # Utils tests
-│   └── test_all_endpoints.py        # Integration tests (19 endpoints)
+│   └── test_all_endpoints.py        # Integration tests
 ├── pyproject.toml            # Project config
+├── CHANGELOG.md              # Version history
 └── README.md                 # This file
 ```
 
@@ -379,9 +485,10 @@ sekha-python-sdk/
 
 ## 🗺️ Roadmap
 
-- [ ] Streaming support for summaries
-- [ ] Batch operations
+- [ ] Batch operations for bulk creates/updates
 - [ ] Connection pooling optimizations
+- [ ] WebSocket support for real-time updates
+- [ ] Enhanced caching layer
 
 ---
 
@@ -391,6 +498,7 @@ sekha-python-sdk/
 - **Docs:** [docs.sekha.dev](https://docs.sekha.dev)
 - **Website:** [sekha.dev](https://sekha.dev)
 - **Discord:** [discord.gg/sekha](https://discord.gg/gZb7U9deKH)
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -415,3 +523,19 @@ Please ensure:
 - Code is formatted (`black .`)
 - Type checks pass (`mypy sekha/`)
 - Coverage remains above 90%
+
+---
+
+## 📝 Release Notes
+
+### v0.2.0 (Current Release)
+
+**Major Features:**
+- ✅ Complete BridgeClient implementation (LLM completions, embeddings, streaming)
+- ✅ Complete MCPClient implementation (memory stats, search)
+- ✅ 5 unified workflow convenience methods
+- ✅ Comprehensive test suite (2,000+ lines)
+- ✅ Full async/await support across all clients
+- ✅ Streaming support for LLM completions
+
+[Full Changelog](CHANGELOG.md)
