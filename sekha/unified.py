@@ -10,7 +10,6 @@ from typing import Optional, List, Dict, Any, AsyncIterator
 from dataclasses import dataclass
 
 import httpx
-import backoff
 
 from .client import SekhaClient as MemoryController
 from .types import (
@@ -158,21 +157,6 @@ class BridgeClient:
         """Close the HTTP client"""
         await self._client.aclose()
 
-    def _should_retry(self, e: Exception) -> bool:
-        """Determine if request should be retried"""
-        if isinstance(e, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout)):
-            return True
-        if isinstance(e, httpx.HTTPStatusError):
-            # Retry on 5xx and 429 (rate limit)
-            return e.response.status_code >= 500 or e.response.status_code == 429
-        return False
-
-    @backoff.on_exception(
-        backoff.expo,
-        (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout, httpx.HTTPStatusError),
-        max_tries=3,
-        giveup=lambda e: not (isinstance(e, httpx.HTTPStatusError) and e.response.status_code >= 500),
-    )
     async def _request_with_retry(
         self,
         method: str,
@@ -180,28 +164,52 @@ class BridgeClient:
         **kwargs
     ) -> httpx.Response:
         """Make HTTP request with automatic retries"""
-        try:
-            response = await self._client.request(method, endpoint, **kwargs)
-            response.raise_for_status()
-            return response
-        except httpx.HTTPStatusError as e:
-            # Convert to our error types
-            if e.response.status_code == 401:
-                raise SekhaAuthError(f"Authentication failed: {e.response.text}")
-            elif e.response.status_code >= 500:
-                raise SekhaAPIError(
-                    f"Bridge server error ({e.response.status_code}): {e.response.text}",
-                    status_code=e.response.status_code,
-                )
-            else:
-                raise SekhaAPIError(
-                    f"Bridge request failed ({e.response.status_code}): {e.response.text}",
-                    status_code=e.response.status_code,
-                )
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout) as e:
-            raise SekhaConnectionError(f"Failed to connect to bridge: {str(e)}")
-        except Exception as e:
-            raise SekhaError(f"Unexpected error: {str(e)}")
+        last_exception = None
+        
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._client.request(method, endpoint, **kwargs)
+                response.raise_for_status()
+                return response
+                
+            except httpx.HTTPStatusError as e:
+                # Don't retry on client errors (4xx) except 429
+                if e.response.status_code < 500 and e.response.status_code != 429:
+                    if e.response.status_code == 401:
+                        raise SekhaAuthError(f"Authentication failed: {e.response.text}")
+                    else:
+                        raise SekhaAPIError(
+                            f"Bridge request failed: {e.response.text}",
+                            status_code=e.response.status_code,
+                            response=e.response.text,
+                        )
+                
+                # Retry on 5xx and 429
+                last_exception = e
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
+                
+            except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout) as e:
+                last_exception = e
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
+                
+            except Exception as e:
+                raise SekhaError(f"Unexpected error: {str(e)}")
+        
+        # All retries exhausted
+        if isinstance(last_exception, httpx.HTTPStatusError):
+            raise SekhaAPIError(
+                f"Bridge server error after {self.max_retries} retries: {last_exception.response.text}",
+                status_code=last_exception.response.status_code,
+                response=last_exception.response.text,
+            )
+        else:
+            raise SekhaConnectionError(
+                f"Failed to connect to bridge after {self.max_retries} retries: {str(last_exception)}"
+            )
 
     async def complete(
         self,
@@ -358,8 +366,9 @@ class BridgeClient:
                 raise SekhaAuthError(f"Authentication failed: {e.response.text}")
             else:
                 raise SekhaAPIError(
-                    f"Streaming failed ({e.response.status_code}): {e.response.text}",
+                    f"Streaming failed: {e.response.text}",
                     status_code=e.response.status_code,
+                    response=e.response.text,
                 )
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout) as e:
             raise SekhaConnectionError(f"Streaming connection failed: {str(e)}")
