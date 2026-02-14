@@ -386,7 +386,7 @@ sekha-python-sdk/
 - [x] Fixed CI/CD pipeline (v0.2.0)
 - [x] Bridge client implementation (v0.2.0)
 - [x] MCP client implementation (v0.2.0)
-- [ ] Unified client workflows (v0.2.0)
+- [x] Unified client workflows (v0.2.0)
 - [ ] PyPI release (v1.0.0)
 - [ ] Streaming support for summaries
 - [ ] Batch operations

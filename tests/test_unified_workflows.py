@@ -187,9 +187,7 @@ class TestCompleteWithContext:
             mock_assemble.side_effect = SekhaConnectionError("Connection failed")
 
             with pytest.raises(SekhaConnectionError):
-                await client.complete_with_context(
-                    prompt="Test", context_query="test"
-                )
+                await client.complete_with_context(prompt="Test", context_query="test")
 
 
 class TestCompleteWithMemory:
@@ -362,7 +360,9 @@ class TestStreamWithContext:
         async def error_generator():
             if False:
                 yield  # Make it a generator
-            raise SekhaAPIError("Stream failed", status_code=500, response="Server error")
+            raise SekhaAPIError(
+                "Stream failed", status_code=500, response="Server error"
+            )
 
         with patch.object(
             client.controller, "assemble_context", new_callable=AsyncMock
