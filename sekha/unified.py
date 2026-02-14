@@ -24,8 +24,6 @@ from .errors import (
     SekhaAuthError,
 )
 
-# Note: MCP client will be implemented in next phase
-
 
 @dataclass
 class SekhaConfig:
@@ -58,25 +56,228 @@ class MCPClient:
     """
     Model Context Protocol (MCP) client
 
-    Provides MCP tools for memory operations.
-    Currently a stub - will be fully implemented in Phase 2.
+    Provides MCP tools for memory operations through the controller's
+    MCP endpoints.
+
+    Supports:
+    - Memory statistics with filtering
+    - Semantic memory search
+    - Automatic retries with exponential backoff
+    - Comprehensive error handling
+
+    Example:
+        ```python
+        mcp = MCPClient(
+            base_url='http://localhost:8080',
+            api_key='sk-test-key-12345678901234567890',
+            timeout=60.0,
+            max_retries=3
+        )
+
+        # Get memory stats
+        stats = await mcp.memory_stats({'labels': ['Engineering']})
+
+        # Search memory
+        results = await mcp.memory_search('TypeScript', limit=5)
+        ```
     """
 
     def __init__(self, base_url: str, api_key: str, **kwargs):
-        self.base_url = base_url
+        """
+        Initialize MCP client
+
+        Args:
+            base_url: Controller base URL
+            api_key: API key for authentication
+            timeout: Request timeout in seconds (default: 30.0)
+            max_retries: Maximum retry attempts (default: 3)
+        """
+        self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = kwargs.get("timeout", 30.0)
         self.max_retries = kwargs.get("max_retries", 3)
 
-    async def memory_stats(self, filters: Dict[str, Any]) -> Dict[str, Any]:
-        """Get memory statistics"""
-        # Stub - to be implemented in Phase 2
-        raise NotImplementedError("MCP client not yet implemented")
+        # Create httpx client
+        headers = {"Authorization": f"Bearer {self.api_key}"}
 
-    async def memory_search(self, query: str, **kwargs) -> Dict[str, Any]:
-        """MCP-based memory search"""
-        # Stub - to be implemented in Phase 2
-        raise NotImplementedError("MCP client not yet implemented")
+        self._client = httpx.AsyncClient(
+            base_url=self.base_url,
+            headers=headers,
+            timeout=httpx.Timeout(self.timeout),
+            follow_redirects=True,
+        )
+
+    async def __aenter__(self) -> "MCPClient":
+        """Async context manager entry"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit"""
+        await self.close()
+
+    async def close(self) -> None:
+        """Close the HTTP client"""
+        await self._client.aclose()
+
+    async def _request_with_retry(
+        self, method: str, endpoint: str, **kwargs
+    ) -> httpx.Response:
+        """Make HTTP request with automatic retries"""
+        last_exception = None
+
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._client.request(method, endpoint, **kwargs)
+                response.raise_for_status()
+                return response
+
+            except httpx.HTTPStatusError as e:
+                # Don't retry on client errors (4xx) except 429
+                if e.response.status_code < 500 and e.response.status_code != 429:
+                    if e.response.status_code == 401:
+                        raise SekhaAuthError(
+                            f"Authentication failed: {e.response.text}"
+                        )
+                    else:
+                        raise SekhaAPIError(
+                            f"MCP request failed: {e.response.text}",
+                            status_code=e.response.status_code,
+                            response=e.response.text,
+                        )
+
+                # Retry on 5xx and 429
+                last_exception = e
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
+                continue
+
+            except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadTimeout) as e:
+                last_exception = e
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
+                continue
+
+            except Exception as e:
+                raise SekhaError(f"Unexpected error: {str(e)}")
+
+        # All retries exhausted
+        if isinstance(last_exception, httpx.HTTPStatusError):
+            raise SekhaAPIError(
+                f"MCP server error after {self.max_retries} retries: {last_exception.response.text}",
+                status_code=last_exception.response.status_code,
+                response=last_exception.response.text,
+            )
+        else:
+            raise SekhaConnectionError(
+                f"Failed to connect to MCP after {self.max_retries} retries: {str(last_exception)}"
+            )
+
+    async def memory_stats(self, filters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get memory statistics
+
+        Retrieves statistics about stored conversations and messages,
+        optionally filtered by labels, folders, or date ranges.
+
+        Args:
+            filters: Filter criteria (labels, folders, start_date, end_date)
+
+        Returns:
+            Statistics including total conversations, messages, tokens,
+            label distribution, and date ranges
+
+        Raises:
+            SekhaAPIError: On API errors
+            SekhaConnectionError: On connection errors
+
+        Example:
+            ```python
+            # Get all stats
+            stats = await mcp.memory_stats({})
+
+            # Filter by label
+            stats = await mcp.memory_stats({
+                'labels': ['Engineering', 'Product']
+            })
+
+            # Filter by date range
+            stats = await mcp.memory_stats({
+                'start_date': '2026-02-01T00:00:00Z',
+                'end_date': '2026-02-13T23:59:59Z'
+            })
+
+            print(f"Total conversations: {stats['total_conversations']}")
+            print(f"Total tokens: {stats['total_tokens']}")
+            ```
+        """
+        # Build request payload
+        payload = {"filters": filters}
+
+        # Make request
+        response = await self._request_with_retry(
+            "POST",
+            "/mcp/memory/stats",
+            json=payload,
+        )
+
+        return response.json()
+
+    async def memory_search(
+        self, query: str, **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Search memory using semantic search
+
+        Performs semantic search across stored conversations and returns
+        relevant results ranked by similarity score.
+
+        Args:
+            query: Search query text
+            limit: Maximum number of results (default: 10)
+            filters: Filter criteria (labels, folders, etc.)
+            **kwargs: Additional search parameters
+
+        Returns:
+            Search results with conversations, scores, and metadata
+
+        Raises:
+            SekhaAPIError: On API errors
+            SekhaConnectionError: On connection errors
+
+        Example:
+            ```python
+            # Basic search
+            results = await mcp.memory_search('TypeScript')
+
+            # Search with limit
+            results = await mcp.memory_search('TypeScript', limit=5)
+
+            # Search with filters
+            results = await mcp.memory_search(
+                'TypeScript',
+                filters={'labels': ['Engineering']},
+                limit=10
+            )
+
+            for result in results['results']:
+                print(f"{result['label']}: {result['content']}")
+                print(f"Score: {result['score']}")
+            ```
+        """
+        # Build request payload
+        payload = {
+            "query": query,
+            **kwargs
+        }
+
+        # Make request
+        response = await self._request_with_retry(
+            "POST",
+            "/mcp/memory/search",
+            json=payload,
+        )
+
+        return response.json()
 
 
 class BridgeClient:
@@ -578,17 +779,20 @@ class SekhaClient:
     async def __aenter__(self) -> "SekhaClient":
         """Async context manager entry"""
         await self.controller.__aenter__()
+        await self.mcp.__aenter__()
         await self.bridge.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit"""
         await self.controller.__aexit__(exc_type, exc_val, exc_tb)
+        await self.mcp.__aexit__(exc_type, exc_val, exc_tb)
         await self.bridge.__aexit__(exc_type, exc_val, exc_tb)
 
     async def close(self) -> None:
         """Close all clients"""
         await self.controller.close()
+        await self.mcp.close()
         await self.bridge.close()
 
     # ============================================
