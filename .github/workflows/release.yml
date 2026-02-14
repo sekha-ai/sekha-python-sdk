@@ -1,0 +1,145 @@
+name: Release to PyPI
+
+# DISABLED: Remove the 'if: false' condition below to enable this workflow
+# This workflow publishes to PyPI when you push a version tag (e.g., v0.2.0)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.2.0)'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build-and-publish:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+    # DISABLED: Remove this line to enable releases
+    if: false
+    
+    permissions:
+      contents: write
+      id-token: write  # Required for trusted publishing to PyPI
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Full history for changelog
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine hatchling
+
+      - name: Extract version from tag or input
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+      - name: Verify version matches pyproject.toml
+        run: |
+          PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          if [ "$PYPROJECT_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "ERROR: Version mismatch!"
+            echo "Tag version: ${{ steps.version.outputs.version }}"
+            echo "pyproject.toml version: $PYPROJECT_VERSION"
+            exit 1
+          fi
+          echo "✅ Version check passed: $PYPROJECT_VERSION"
+
+      - name: Build distribution packages
+        run: |
+          python -m build
+          echo "\n📦 Built packages:"
+          ls -lh dist/
+
+      - name: Check package with twine
+        run: |
+          twine check dist/*
+          echo "✅ Package validation passed"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true
+          verbose: true
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Extract section from CHANGELOG.md between this version and next heading
+          CHANGELOG=$(awk "/^## \[$VERSION\]/,/^## \[/ { if (/^## \[/ && !p) { p=1; next }; if (/^## \[/ && p) exit; if (p) print }" CHANGELOG.md)
+          
+          # Save to file for GitHub release
+          echo "$CHANGELOG" > release_notes.md
+          
+          echo "📝 Changelog for v$VERSION extracted"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Discord (optional)
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "content": "🚀 **Sekha Python SDK v${{ steps.version.outputs.version }}** released!\n\n📦 PyPI: https://pypi.org/project/sekha-python-sdk/${{ steps.version.outputs.version }}/\n📄 Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
+            }'
+        continue-on-error: true
+
+
+  verify-release:
+    name: Verify PyPI Release
+    runs-on: ubuntu-latest
+    needs: build-and-publish
+    if: false  # Disabled
+    
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Wait for PyPI to update
+        run: sleep 60
+
+      - name: Install from PyPI
+        run: |
+          pip install sekha-python-sdk==${{ needs.build-and-publish.outputs.version }}
+          echo "✅ Successfully installed from PyPI"
+
+      - name: Verify installation
+        run: |
+          python -c "import sekha; print(f'Sekha SDK version: {sekha.__version__}')"
+          echo "✅ Package imports successfully"
