@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org)
 [![CI](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-python-sdk/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-python-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-python-sdk)
-[![PyPI](https://img.shields.io/badge/pypi-coming--soon-orange.svg)](https://pypi.org)
+[![PyPI](https://img.shields.io/pypi/v/sekha-python-sdk.svg)](https://pypi.org/project/sekha-python-sdk/)
 [![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/sekha-ai/sekha-python-sdk/blob/main/CHANGELOG.md)
 
 ---
@@ -46,10 +46,10 @@ Official Python client library for interacting with Sekha AI Memory System, prov
 ### Installation
 
 ```bash
-# From PyPI (coming soon)
+# From PyPI
 pip install sekha-python-sdk
 
-# From source (current)
+# From source
 git clone https://github.com/sekha-ai/sekha-python-sdk.git
 cd sekha-python-sdk
 pip install -e .
