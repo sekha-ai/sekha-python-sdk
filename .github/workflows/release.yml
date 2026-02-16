@@ -1,6 +1,5 @@
 name: Release to PyPI
 
-# DISABLED: Remove the 'if: false' condition below to enable this workflow
 # This workflow publishes to PyPI when you push a version tag (e.g., v0.2.0)
 
 on:
@@ -21,8 +20,6 @@ jobs:
   build-and-publish:
     name: Build and Publish to PyPI
     runs-on: ubuntu-latest
-    # DISABLED: Remove this line to enable releases
-    if: false
     
     permissions:
       contents: write
@@ -123,7 +120,7 @@ jobs:
     name: Verify PyPI Release
     runs-on: ubuntu-latest
     needs: build-and-publish
-    if: false  # Disabled
+    if: false  # Disabled - can be enabled for verification
     
     steps:
       - name: Set up Python
